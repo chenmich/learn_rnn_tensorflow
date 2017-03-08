@@ -17,34 +17,40 @@
 import tensorflow as tf
 import numpy as np
 from matplotlib import pyplot as pyl
+
+#model parameters
 BATCH_SIZE = 2
 MAX_STEP = 10
 FEATURE_SIZE = 8
 NUM_UNITS = 64
+
 # Create input data
 X = np.random.randn(BATCH_SIZE, MAX_STEP, FEATURE_SIZE)
 Y = X*np.sin(X)
+
+#model
 cell = tf.contrib.rnn.BasicLSTMCell(num_units=NUM_UNITS, state_is_tuple=True)
 state = cell.zero_state(BATCH_SIZE, dtype=tf.float64)
-loss = 0
-losses = []
-echo = []
 W = tf.get_variable(dtype=tf.float64, shape=[NUM_UNITS, FEATURE_SIZE], name='weight')
 B = tf.get_variable(dtype=tf.float64, shape=[FEATURE_SIZE], name='bais')
 output, state = tf.nn.dynamic_rnn(cell, X, [MAX_STEP, MAX_STEP], state)
+loss = 0
 shape = output.shape
-print("output'shape is ", shape)
-print("Y's shape is ", Y.shape)
 for i in range(shape[0]):
     _y = tf.matmul(output[i], W) + B
     loss += tf.reduce_sum(tf.square(Y[i] - _y))
+
+#prepare for train
+losses = []
+echo = []
 sess = tf.Session()
 init = tf.global_variables_initializer()
 sess.run(init)
 optimizer = tf.train.GradientDescentOptimizer(0.01)
 train = optimizer.minimize(loss)
 
-for i in range(0, 101, 1):#multi echo of train using same dataset 
+#train
+for i in range(0, 1001, 1):#multi echo of train using same dataset 
     sess.run(train)
     if i % 10 == 0:
         loss_patial = sess.run(loss)
