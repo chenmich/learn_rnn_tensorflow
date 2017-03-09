@@ -17,17 +17,18 @@
 import tensorflow as tf
 import numpy as np
 from matplotlib import pyplot as pyl
+import data_reader as reader
 
 #model parameters
 BATCH_SIZE = 2
 MAX_STEP = 10
 FEATURE_SIZE = 8
 NUM_UNITS = 64
-
+MU = 1.401155
+INIT_VALUE = 0.618
 # Create input data
 X = np.random.randn(BATCH_SIZE, MAX_STEP, FEATURE_SIZE)
 Y = X*np.sin(X)
-
 #model
 cell = tf.contrib.rnn.BasicLSTMCell(num_units=NUM_UNITS, state_is_tuple=True)
 state = cell.zero_state(BATCH_SIZE, dtype=tf.float64)
@@ -50,7 +51,7 @@ optimizer = tf.train.GradientDescentOptimizer(0.01)
 train = optimizer.minimize(loss)
 
 #train
-for i in range(0, 1001, 1):#multi echo of train using same dataset 
+for i in range(0, 100, 1):#multi echo of train using same dataset 
     sess.run(train)
     if i % 10 == 0:
         loss_patial = sess.run(loss)
