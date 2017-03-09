@@ -56,12 +56,5 @@ def __generate_data__(num, mu=1.401155189, init_value=0.618):
         x = 1 - mu*x*x
         X.append(x)
     return np.array(X)
-
-
-
-
-    
-
-
-
+#
 

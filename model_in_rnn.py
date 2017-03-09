@@ -17,7 +17,8 @@
 import tensorflow as tf
 import numpy as np
 from matplotlib import pyplot as pyl
-import data_reader as reader
+import data_reader
+
 
 #model parameters
 BATCH_SIZE = 2
@@ -34,10 +35,12 @@ cell = tf.contrib.rnn.BasicLSTMCell(num_units=NUM_UNITS, state_is_tuple=True)
 state = cell.zero_state(BATCH_SIZE, dtype=tf.float64)
 W = tf.get_variable(dtype=tf.float64, shape=[NUM_UNITS, FEATURE_SIZE], name='weight')
 B = tf.get_variable(dtype=tf.float64, shape=[FEATURE_SIZE], name='bais')
-output, state = tf.nn.dynamic_rnn(cell, X, [MAX_STEP, MAX_STEP], state)
+
+_X = tf.placeholder(dtype=tf.float64, shape=[BATCH_SIZE, MAX_STEP, FEATURE_SIZE])
+output, state = tf.nn.dynamic_rnn(cell, _X, [MAX_STEP, MAX_STEP], state)
+
 loss = 0
-shape = output.shape
-for i in range(shape[0]):
+for i in range(output.shape[0]):
     _y = tf.matmul(output[i], W) + B
     loss += tf.reduce_sum(tf.square(Y[i] - _y))
 
@@ -51,8 +54,8 @@ optimizer = tf.train.GradientDescentOptimizer(0.01)
 train = optimizer.minimize(loss)
 
 #train
-for i in range(0, 100, 1):#multi echo of train using same dataset 
-    sess.run(train)
+for i in range(0, 500, 1):#multi echo of train using same dataset
+    sess.run(train, feed_dict={_X: tf.Variable(X)})
     if i % 10 == 0:
         loss_patial = sess.run(loss)
         print("echo= ", i, "loss= ", loss_patial)
