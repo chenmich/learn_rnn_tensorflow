@@ -15,9 +15,6 @@
 ''' Generate a serie of parabolic mapping
 '''
 import numpy as np
-from matplotlib import pyplot as pyplot
-
-
 
 def data_reader(num_batch=1000, batch_size=5,
                 sequence_length=200, feature_size=5,
@@ -31,16 +28,17 @@ def data_reader(num_batch=1000, batch_size=5,
             mu:parameter of parabolic mapping
             init_value:initial value for mapping
     '''
-    for _ in range(batch_size):
+    for _ in range(num_batch):
         batch_data = __generate_data__(2*batch_size*sequence_length*feature_size,
                                        mu=mu, init_value=init_value)#one dimension data
         #cut up to two series
         batch_data_x = batch_data[0: batch_size*sequence_length*feature_size]
         batch_data_y = batch_data[batch_size*sequence_length*feature_size:]
-        #reshape to (batch_size, sequence_length, feature_size) from batch_size*sequence_length*feature_size
-        batch_data_x = np.reshape(batch_data_x, (batch_size, sequence_length, feature_size))
-        batch_data_y = np.reshape(batch_data_y, (batch_size, sequence_length, feature_size))
-        yield batch_data_x, batch_data_y
+        # reshape to (batch_size, sequence_length, feature_size)
+        # from batch_size*sequence_length*feature_size
+        x = np.reshape(batch_data_x, (batch_size, sequence_length, feature_size))
+        y = np.reshape(batch_data_y, (batch_size, sequence_length, feature_size))
+        yield x, y
 
 
 
