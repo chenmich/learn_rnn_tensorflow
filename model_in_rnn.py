@@ -23,7 +23,7 @@ import data_reader as dr
 
 #model parameters
 BATCH_SIZE = 5
-NUM_BATCH = 200
+NUM_BATCH = 2000
 SEQUENCE_LENGTH = 200
 FEATURE_SIZE = 5
 MU = 1.401157
@@ -31,7 +31,7 @@ INIT_VALUE = 0.618
 
 NUM_UNITS = 12
 NUM_CELL_STACK = 3
-ECHO = 1000
+ECHO = 400
 def printFn(content):
     for _ in range(10):
         print(content)
