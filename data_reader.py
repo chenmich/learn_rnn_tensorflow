@@ -16,9 +16,9 @@
 '''
 import numpy as np
 
-def data_reader(num_batch=1000, batch_size=5,
-                sequence_length=200, feature_size=5,
-                mu=1.401155189, init_value=0.618):
+def non_linear_parabolic_curve_map_data_reader(num_batch=1000, batch_size=5,
+                                               sequence_length=200, feature_size=5,
+                                               mu=1.401155189, init_value=0.618):
     ''' generate a na.array object wiht shape = [batch_size, sequence_length, feature_size]
         Arg:
             num_batch:number of batch about data_reader
@@ -29,7 +29,7 @@ def data_reader(num_batch=1000, batch_size=5,
             init_value:initial value for mapping
     '''
     for _ in range(num_batch):
-        batch_data = __generate_data__(2*batch_size*sequence_length*feature_size,
+        batch_data = __non_linear_parabolic_curve_map_generate_data__(2*batch_size*sequence_length*feature_size,
                                        mu=mu, init_value=init_value)#one dimension data
         #cut up to two series
         batch_data_x = batch_data[0: batch_size*sequence_length*feature_size]
@@ -43,7 +43,7 @@ def data_reader(num_batch=1000, batch_size=5,
 
 
 #
-def __generate_data__(num, mu=1.401155189, init_value=0.618):
+def __non_linear_parabolic_curve_map_generate_data__(num, mu=1.401155189, init_value=0.618):
     x = init_value
     #set the first 200 data aside
     for _ in range(200):
@@ -55,4 +55,10 @@ def __generate_data__(num, mu=1.401155189, init_value=0.618):
         X.append(x)
     return np.array(X)
 #
+def sinFun_data_reader(num_batch=1000, batch_size=5,
+                       sequence_length=200, feature_size=5):
+    for _ in range(num_batch):
+        x = np.random.randn(batch_size, sequence_length, feature_size) 
+        y = x*np.sin(x)
+        yield x, y
 
