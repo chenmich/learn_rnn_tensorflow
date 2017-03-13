@@ -15,6 +15,7 @@
 ''' Generate a serie of parabolic mapping
 '''
 import numpy as np
+import csv
 
 def non_linear_parabolic_curve_map_data_reader(num_batch=1000, batch_size=5,
                                                sequence_length=200, feature_size=5,
@@ -61,4 +62,15 @@ def sinFun_data_reader(num_batch=1000, batch_size=5,
         x = np.random.randn(batch_size, sequence_length, feature_size) 
         y = x*np.sin(x)
         yield x, y
+#
+def csv_data_reader():
+    with open("some.csv", mode='r') as csvfile:
+        reader = csv.reader(csvfile)
+        lines = []
+        for line in reader:
+            
+            yield line
+
+
+
 
