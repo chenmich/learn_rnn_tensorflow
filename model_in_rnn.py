@@ -23,15 +23,15 @@ import data_reader as dr
 
 #model parameters
 BATCH_SIZE = 5
-NUM_BATCH = 10000
+NUM_BATCH = 2000
 SEQUENCE_LENGTH = 200
 FEATURE_SIZE = 5
 MU = 1.401157
 INIT_VALUE = 0.618
 
-NUM_UNITS = 128
+NUM_UNITS = 12
 NUM_CELL_STACK = 3
-ECHO = 5000
+ECHO = 400
 def printFn(content):
     for _ in range(10):
         print(content)
@@ -39,7 +39,7 @@ sess = tf.Session()
 #model
 cell = tf.contrib.rnn.BasicLSTMCell(num_units=NUM_UNITS, state_is_tuple=True)
 cells = tf.contrib.rnn.MultiRNNCell([cell for _ in range(NUM_CELL_STACK)])
-state = cell.zero_state(BATCH_SIZE, dtype=tf.float32)
+init_state = state = cell.zero_state(BATCH_SIZE, dtype=tf.float32)
 
 W = tf.get_variable(name="weight", shape=[NUM_UNITS, FEATURE_SIZE], dtype=tf.float64)
 B = tf.get_variable(name="bias", shape=[SEQUENCE_LENGTH, FEATURE_SIZE],dtype=tf.float64)
@@ -63,6 +63,7 @@ def lossFn(predicted, real):
     loss = tf.reduce_sum(substract_square_tensor) / BATCH_SIZE
     return loss
 #
+
 loss = lossFn(predicted(outputs), _Y)
 #prepare for train
 optimizer = tf.train.GradientDescentOptimizer(0.01)
@@ -78,12 +79,13 @@ pyl_x = []
 pyl_y = []
 start = datetime.datetime.now()
 print("start time is ", start)
-for echo in range(0,ECHO+1):
+for echo in range(0, ECHO+1):
     losses = []
-    
-    for x, y in dr.data_reader(num_batch=NUM_BATCH, batch_size=BATCH_SIZE,
-                               sequence_length=SEQUENCE_LENGTH,
-                               feature_size=FEATURE_SIZE):
+
+    for x, y in dr.non_linear_parabolic_curve_map_data_reader(num_batch=NUM_BATCH,
+                                                              batch_size=BATCH_SIZE,
+                                                              sequence_length=SEQUENCE_LENGTH,
+                                                              feature_size=FEATURE_SIZE):
         sess.run(train, feed_dict={_X:x, _Y:y})
         _loss = sess.run(loss, feed_dict={_X:x, _Y:y})
         losses.append(_loss)
