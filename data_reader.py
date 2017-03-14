@@ -31,7 +31,7 @@ def non_linear_parabolic_curve_map_data_reader(num_batch=1000, batch_size=5,
     '''
     for _ in range(num_batch):
         batch_data = __non_linear_parabolic_curve_map_generate_data__(2*batch_size*sequence_length*feature_size,
-                                       mu=mu, init_value=init_value)#one dimension data
+                                                                      mu=mu, init_value=init_value)#one dimension data
         #cut up to two series
         batch_data_x = batch_data[0: batch_size*sequence_length*feature_size]
         batch_data_y = batch_data[batch_size*sequence_length*feature_size:]
@@ -63,12 +63,11 @@ def sinFun_data_reader(num_batch=1000, batch_size=5,
         y = x*np.sin(x)
         yield x, y
 #
-def csv_data_reader():
-    with open("some.csv", mode='r') as csvfile:
+def csv_data_reader(filename):
+    with open(filename, mode='r') as csvfile:
         reader = csv.reader(csvfile)
         lines = []
         for line in reader:
-            
             yield line
 
 
