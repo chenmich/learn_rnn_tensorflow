@@ -70,6 +70,7 @@ optimizer = tf.train.GradientDescentOptimizer(0.01)
 train = optimizer.minimize(loss)
 init = tf.global_variables_initializer()
 sess.run(init)
+writer = tf.summary.FileWriter("c://tmp/data/graph", sess.graph)
 #train
 print()
 print()
