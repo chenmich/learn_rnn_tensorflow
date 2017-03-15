@@ -1,6 +1,5 @@
 import numpy as np
 import csv
-import data_reader as dr
 import datetime
 from datetime import date
 
@@ -28,6 +27,11 @@ lines_array_norm = np.hstack((lines_array_slice_norm, another_slice_norm))
 
 x = np.arange(16.0).reshape(4, 4)
 y1, y2 = np.hsplit(x, indices_or_sections=[3,])
+z1 = x[0:1]
+z2 = x[1:]
+print(z1)
+print()
+print(z2)
 std = np.std(y2)
 #print(lines.reverse())
 
@@ -37,22 +41,4 @@ c = b[0]
 c[::-1,]
 
 
-
-with open("some.csv", mode='r') as some:
-    reader = csv.reader(some, dialect='excel')
-    line_list = []
-    first_line = next(reader)
-    for line in reader:
-        _line = [float(_x) for _x in line[1:]]
-        line_list.append(_line)
-
-with open("some.csv", mode='r') as dictSoem:
-    reader = csv.DictReader(dictSoem, fieldnames=["date", "open", "close", "max", "min", "value"])
-    first_line = next(reader)
-    second_line = next(reader)
-    
-exchange_date = second_line['date']
-print(exchange_date)
-exchange_date = datetime.datetime.strptime("30-Sep-08", '%d-%b-%y')
-print(exchange_date)
 

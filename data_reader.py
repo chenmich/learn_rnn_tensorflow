@@ -63,13 +63,41 @@ def sinFun_data_reader(num_batch=1000, batch_size=5,
         y = x*np.sin(x)
         yield x, y
 #
-def csv_data_reader(filename):
-    with open(filename, mode='r') as csvfile:
-        reader = csv.reader(csvfile)
-        lines = []
-        for line in reader:
-            yield line
+
+class SomeData():
+    def __init__(self, files, sequence_length=200, batch_size=5):
+        if not isinstance(files, list):
+            raise TypeError("The parameter files must be a list")
+        if len(files) == 0:
+            raise ValueError("The files is Null!")
+        self._files = files
+        self._sequence_length = sequence_length
+        self._batch_size = batch_size
+        self._price_mean = 0
+        self._price_std = 0
+        self._volumn_mean = 0
+        self._volumn_std = 0
+        self._train_data = []
+        self._valid_data = []
+        for _filename in self._files:
+            with open(_filename, mode='r', encoding='utf-8') as csvfile:
+                reader = csv.reader(csvfile)
+                _train = []
+                _valid = []
+                n = 0
+                for _line in reader:
+                    _tmp = _line[0]
+                    _line_number = [float(x) for x in _line[1:]]
+                    _line = [_tmp] + _line_number
+                    if n < sequence_length:
+                        _valid.append(_line)
+                    else:
+                        _train.append(_line)
+                    n += 1
+                _train.reverse()
+                _valid.reverse()
+                self._train_data.append(_train)
+                self._valid_data.append(_valid)
 
 
-
-
+    #

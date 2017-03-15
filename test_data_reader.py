@@ -1,26 +1,26 @@
 import unittest
 import numpy as np
 import data_reader as dr
+import datetime
 
-BATCH_SIZE = 5
-SEQUENCE_LENGTH = 200
-FEATURE_SIZE = 5
 
-class test_data_reader(unittest.TestCase):
-         
-    def test_data_shape(self):
-        for x, y in dr.non_linear_parabolic_curve_map_data_reader (1000, batch_size=BATCH_SIZE,
-                                                                   sequence_length=SEQUENCE_LENGTH,
-                                                                   feature_size=FEATURE_SIZE):
-            self.assertEqual(x.shape, (BATCH_SIZE, SEQUENCE_LENGTH, FEATURE_SIZE))
+class test_someData(unittest.TestCase):
+    ''' test the some data set
+    '''
+    def test_train_data(self):
+        _num_file = 2
+        _length_file = 4000
+        _sequence_length = 200
+        _files = ['data/some00000.csv', 'data/some00001.csv']
+        _some_data = dr.SomeData(_files, _sequence_length)
+        _train = np.array(_some_data._train_data)
+        datetime0 = datetime.datetime.strptime(_train[0, 0, 0], "%d-%b-%y")
+        datetime1 = datetime.datetime.strptime(_train[0, 1, 0], "%d-%b-%y")
+        self.assertLess(datetime0.day, datetime1.day)#make sure reveser the order
 
-class test_csv_reader(unittest.TestCase):
-    def test_csv_reader(self):
-        for line in dr.csv_data_reader():
-            print(line)
+
+
 
 if __name__ == "__main__":
     unittest.main()
-
-
-
+    
