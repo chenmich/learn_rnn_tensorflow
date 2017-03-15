@@ -2,6 +2,10 @@ import numpy as np
 import csv
 import datetime
 from datetime import date
+import itertools
+import data_reader as dr
+
+
 
 lines = [[1, 2, 3, 4, 110],
          [2, 3, 4, 5, 222],
@@ -50,9 +54,17 @@ f = [
     ]
 f_array = np.array(f)
 g_array = np.reshape(f_array, [2, -1])
-print(g_array.shape)
-print(g_array)
-print(f_array.shape)
+#print(g_array.shape)
+#print(g_array)
+#print(f_array.shape)
+
+data = dr.non_linear_parabolic_curve_map_data_reader()
+_count = itertools.count(5,1)
+print(_count)
+
+print(5/2)
+print(5%2)
+print(5//2)
 
 
 
