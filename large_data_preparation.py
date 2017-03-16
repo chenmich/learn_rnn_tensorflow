@@ -48,6 +48,7 @@ def _make_examples(sequence_length, sequence):
     for line in sequence:
         _line = [float(x) for x in line[1:]]
         _lines.append(_line)
+    #Reverse order with datetime
     _lines.reverse()
     #begin to make examples
     _has_short_example = False
