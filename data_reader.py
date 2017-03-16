@@ -102,26 +102,30 @@ class SomeData():
     def train_data(self):
         ''' generate example
         '''
-        _has_short_example = False
+        _has_short_example = True
         for _data in self._train_data:
             _length_data = len(_data)
             _num_examples = _length_data // (2* self._sequence_length)
             if _length_data % (2*self._sequence_length) == 0:
                 _num_examples -= 1
-                _has_short_example = True
-            examples = []
-            targets = []
-            for n in range(_num_examples):
+                _has_short_example = False
+            for n in range(_num_examples + 1):
                 _example = None
                 _target = None
+                _start = 2*n*self._sequence_length
+                _end = _start + 2*self._sequence_length
+                _tmp = None
                 if n < _num_examples:
-                    _example = _data[n*self._sequence_length: (n + 1)*self._sequence_length]
-                    _target = _data[(n + 1)*self._sequence_length: (n + 2)*self._sequence_length]
+                    _tmp = _data[_start: _end]
+                    _example = _tmp[_start: self._sequence_length]
+                    _target  = _tmp[_start + self._sequence_length:]
                 else:
                     if _has_short_example:
-                        _example = _data[n*self._sequence_length/2: (n + 1)*self._sequence_length/2]
-                        _target = _data[(n + 1)*self._sequence_length / 2:]
-                examples.append(_example)
-                targets.append(_target)
+                        _tmp = _data[_start:]
+                        _example = _tmp[0: self._sequence_length // 2]
+                        _target = _tmp[self._sequence_length//2:]
+                
+                yield _example, _target
+
 
 
