@@ -41,7 +41,8 @@ class test_someData(unittest.TestCase):
         _some_data = dr.SomeData(_files, _sequence_length)
         _data_set = _some_data.train_data()
         n = 0
-        
+        for example, target in _data_set:
+            n += 1
 
 
 
