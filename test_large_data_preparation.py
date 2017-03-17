@@ -16,6 +16,7 @@ import unittest
 import csv
 import pathlib
 import numpy as np
+import fs
 import large_data_preparation as ldp
 ''' Test large-data-preparation module
 '''
@@ -61,9 +62,10 @@ class test_combinate_examples(unittest.TestCase):
 #
 class test_get_file_list(unittest.TestCase):
     def test_result(self):
-        path = 'data/raw_data'
+        path = 'raw_data/'
         _extension = '*.csv'
-        files = ldp._get_file_list(path, _extension)
+        _fsys = fs.osfs.OSFS("data/")
+        files = ldp._get_file_list(_fsys, path, _extension)
         length = len(list(files))
         self.assertGreater(length, 0)
 #

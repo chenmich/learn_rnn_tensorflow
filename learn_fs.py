@@ -1,6 +1,5 @@
 import csv
 import csv
-import pathlib
 from fs.memoryfs import MemoryFS
 from fs.opener import open_fs
 import numpy as np
@@ -36,4 +35,11 @@ with MemoryFS() as myfs:
     print(files[0].name)
     files = list(myfs.filterdir('data/result_data/', files=['some*.csv']))
     print(files[0].name)
+#
+print('____________________')
+_fsys = open_fs('data/')
+filelist = list(_fsys.filterdir('/raw_data/', files=["*.csv"]))
+for _file in filelist:
+    print(_file.name)
+
     

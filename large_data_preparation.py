@@ -19,20 +19,19 @@ import pathlib
 import numpy as np
 from fs.osfs import OSFS
 
-MODEL_FS = None
+MODEL_DATA_FS = None
 RAW_DATA_PATH = 'raw_data/'
 RESULT_DATA_PATH = 'result_data/'
 RAW_DATA_FILE_EXTENSION = '*.csv'
 
 
-def _get_file_list(pure_path, match):
+def _get_file_list(fsys, pure_path, match):
     ''' return all the file by matching parameter match in pure_path' folder
         Arg:
             pure_path: pure path without file name
             match:file name with wildcard, for example, *.csv, some*.csv
     '''
-    path = pathlib.Path(pure_path)
-    filelist = path.glob(match)
+    filelist = list(fsys.filterdir(pure_path, files=[match]))
     return filelist
 #
 def _get_prediction_sequence(filename, sequence_length, sequence):
@@ -125,7 +124,7 @@ def _convert_data_to_example(sequence_length, path, match):
         The first three parts will be stored in csv format
         The last part will be stored in json for being easy to search
     '''
-    files = _get_file_list(path, match)
+    files = _get_file_list(MODEL_DATA_FS, path, match)
     if len(list(files)) == 0:
         raise ValueError('There are any files specified by parameter raw_pure_path and match')
     prediction_sequence = {} #store sequence for prediction
@@ -149,7 +148,7 @@ def main(args):
     ''' main control flow
     '''
     
-    MODEL_FS = OSFS(args.data_path)
+    MODEL_DATA_FS = OSFS(args.data_path)
     #_convert_data_to_example(args.Sequence_length, args.data_path + RAW_DATA_PATH, RAW_DATA_FILE_EXTENSION)
     MODEL_FS.close()
 #
