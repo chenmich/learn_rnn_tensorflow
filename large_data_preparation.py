@@ -15,7 +15,6 @@
 ''' This module make examples from sequence data
 '''
 import argparse
-import pathlib
 import numpy as np
 from fs.osfs import OSFS
 
@@ -23,6 +22,7 @@ MODEL_DATA_FS = None
 RAW_DATA_PATH = 'raw_data/'
 RESULT_DATA_PATH = 'result_data/'
 RAW_DATA_FILE_EXTENSION = '*.csv'
+SEQUENCE_LENGTH = 0
 
 
 def _get_file_list(fsys, pure_path, match):
@@ -31,7 +31,8 @@ def _get_file_list(fsys, pure_path, match):
             pure_path: pure path without file name
             match:file name with wildcard, for example, *.csv, some*.csv
     '''
-    filelist = list(fsys.filterdir(pure_path, files=[match]))
+    _filelist = list(fsys.filterdir(pure_path, files=[match]))
+    filelist = [x.name for x in _filelist]
     return filelist
 #
 def _get_prediction_sequence(filename, sequence_length, sequence):
@@ -40,7 +41,7 @@ def _get_prediction_sequence(filename, sequence_length, sequence):
     '''
     if len(sequence) < sequence_length:
         raise ValueError("The seqence is short for demand!")
-    _key = filename.spilt()[0]
+    _key = filename.split('.')[0]
     _prediction_sequence = sequence[0:sequence_length]
     _prediction_sequence.reverse()
     return _key, _prediction_sequence
@@ -113,7 +114,7 @@ def _combinate_example(total_examples, other_examples):
     for _line in other_examples:
         total_examples.append(_line)
 
-def _convert_data_to_example(sequence_length, path, match):
+def _convert_data_to_example(fsys, sequence_length, path, match):
     ''' All the file in raw_pure_path will be converted to the four parts
         The first part is about the examples for train
         The second part is about the example for valid
@@ -131,7 +132,7 @@ def _convert_data_to_example(sequence_length, path, match):
     _examples = []#store the first three
     for filename in files:
         _lines = []
-        with open(filename, mode='r') as _file:
+        with fsys.open(filename, mode='r') as _file:
             for _line in _file:
                 _lines.append(_line)
         #for prediction
@@ -140,17 +141,17 @@ def _convert_data_to_example(sequence_length, path, match):
         #for the first three
         _examples_ = _make_examples(sequence_length, _lines[sequence_length:])
         _combinate_example(_examples, _examples_)
-    
+
 
 
 # main control
 def main(args):
     ''' main control flow
     '''
-    
+    SEQUENCE_LENGTH = ARGS.Sequence_length
     MODEL_DATA_FS = OSFS(args.data_path)
     #_convert_data_to_example(args.Sequence_length, args.data_path + RAW_DATA_PATH, RAW_DATA_FILE_EXTENSION)
-    MODEL_FS.close()
+    MODEL_DATA_FS.close()
 #
 
 if __name__ == "__main__":

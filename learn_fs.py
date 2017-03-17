@@ -1,11 +1,12 @@
 import csv
-import csv
+import json
 from fs.memoryfs import MemoryFS
 from fs.opener import open_fs
 import numpy as np
 
 home_local = MemoryFS()
 home_local.makedir('data')
+home_local.close()
 examples = np.arange(10000).reshape(2000, 5).tolist()
 with MemoryFS() as myfs:
     myfs.makedir('data')
@@ -42,4 +43,17 @@ filelist = list(_fsys.filterdir('/raw_data/', files=["*.csv"]))
 for _file in filelist:
     print(_file.name)
 
-    
+some = {"ms":[1,2,3],
+        "ns":[11,12,18]}
+with MemoryFS() as anotherfs:
+    anotherfs.makedir('data')
+    with anotherfs.open('data/some.json', mode='w') as jsonfile:
+        json.dump(some, jsonfile)
+    with anotherfs.open('data/some.json', mode='r') as jsonfile:
+        somejson = json.load(jsonfile)
+        print(somejson)
+
+#
+filename = 'some00000.csv'
+str_filename = filename.split(".")
+print(str_filename)
