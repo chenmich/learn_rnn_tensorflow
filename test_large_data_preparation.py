@@ -66,6 +66,10 @@ class test_get_file_list(unittest.TestCase):
         files = ldp._get_file_list(path, _extension)
         length = len(list(files))
         self.assertGreater(length, 0)
+#
+class test_save_examples(unittest.TestCase):
+    def test_save_exampes(self):
+        pass
 
 if __name__ == "__main__":
     unittest.main()

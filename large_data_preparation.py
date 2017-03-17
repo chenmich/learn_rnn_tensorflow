@@ -31,7 +31,7 @@ def _get_file_list(pure_path, match):
             pure_path: pure path without file name
             match:file name with wildcard, for example, *.csv, some*.csv
     '''
-    path = pathlib.Path(pure_path)    
+    path = pathlib.Path(pure_path)
     filelist = path.glob(match)
     return filelist
 #
@@ -141,6 +141,7 @@ def _convert_data_to_example(sequence_length, path, match):
         #for the first three
         _examples_ = _make_examples(sequence_length, _lines[sequence_length:])
         _combinate_example(_examples, _examples_)
+    
 
 
 # main control
