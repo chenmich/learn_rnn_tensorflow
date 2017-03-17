@@ -14,9 +14,9 @@
 # ==============================================================================
 ''' This module make examples from sequence data
 '''
-import argparse 
-import numpy as np
+import argparse
 import pathlib
+import numpy as np
 
 
 def _get_file_list(pure_path, match):
@@ -79,6 +79,27 @@ def _make_examples(sequence_length, sequence):
         _examples.append(_target)
     return _examples
 #
+def _save_examples(examples, pure_path):
+    ''' Write the examples to a few file of csv format
+        The csv file can have one million lines
+        All the lines will dived  sequence of groups of examples
+        In a group, the input sequence will be set first, then lines of the target
+        For example,
+
+        ......
+        22.0, 33.5, 44.3, 22.0, 88.7
+        32.2, 22.8, 55.4, 61.3, 99.2
+        22.3, 33.5, 67.1, 22.3, 89.9
+        33.2, 22.1, 67.4, 33.1, 99.8
+        ......
+
+        In above group of example,
+        the input sequence is consist of the first two lines,
+        and the target sequenc is consist of the esecond tow lines.
+        There are another group before and after the group.
+    '''
+
+    pass
 def _convert_data_to_example(sequence_length,
                              raw_pure_path, match,
                              result_pure_path):
@@ -96,6 +117,7 @@ def _convert_data_to_example(sequence_length,
     if len(files) == 0:
         raise ValueError('There are any files specified by parameter raw_pure_path and match')
     prediction_sequence = {} #store sequence for prediction
+    _examples_ = []#store the first three
     for filename in files:
         _lines = []
         with open(filename, mode='r') as _file:
@@ -104,17 +126,20 @@ def _convert_data_to_example(sequence_length,
         #for prediction
         _key, value = _get_prediction_sequence(filename, sequence_length, _lines)
         prediction_sequence[_key] = value
+        #for the first three
         _examples = _make_examples(sequence_length, _lines[sequence_length:])
-        
+        for _example in _examples:#store by sequence
+            _examples_.append(_example)
+
 # main control
 def main(args):
     ''' main control flow
     '''
-    path = pathlib.Path(args.raw_data_path)
     print("3800 / 400", 3800 / 400)
     print("3800 // 400", 3800 // 400)
     print("3800 % 400", 3800 % 400)
-    
+
+#
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -128,7 +153,7 @@ if __name__ == "__main__":
                         default='data/result_data')
     parser.add_argument("--convert", "-Con", action='store_true',
                         help="convert all the raw file to fileexamples")
-    parser.add_argument("--Sequence_length","-Length",
+    parser.add_argument("--Sequence_length", "-Length",
                         default=200,
                         help='the sequence length in a example')
     ARGS = parser.parse_args()
