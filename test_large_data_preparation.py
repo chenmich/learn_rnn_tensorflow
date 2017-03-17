@@ -14,6 +14,7 @@
 # ==============================================================================
 import unittest
 import csv
+import pathlib
 import numpy as np
 import large_data_preparation as ldp
 ''' Test large-data-preparation module
@@ -38,7 +39,6 @@ class test_make_example(unittest.TestCase):
 #
 class test_save_example(unittest.TestCase):
     ''' Test _save_examples function in the large_data_preparation module
-        https://github.com/PyFilesystem/pyfilesystem
     '''
     pass
 #
@@ -49,13 +49,23 @@ class test_combinate_examples(unittest.TestCase):
         #test result of combination
         _length = len(examples)
         _other_length = len(_examples)
-        examples = ldp._combinate_example(examples, _examples)
+        ldp._combinate_example(examples, _examples)
         total_length = len(examples)
         self.assertEqual(total_length, _length + _other_length)
         #test parameter
         with self.assertRaises(ValueError) as context:
             ldp._combinate_example(examples, 2)
             ldp._combinate_example(3, _examples)
+            ldp._combinate_example(3.0, 2.0)
+
+#
+class test_get_file_list(unittest.TestCase):
+    def test_result(self):
+        path = 'data/raw_data'
+        _extension = '*.csv'
+        files = ldp._get_file_list(path, _extension)
+        length = len(list(files))
+        self.assertGreater(length, 0)
 
 if __name__ == "__main__":
     unittest.main()

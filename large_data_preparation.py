@@ -17,6 +17,12 @@
 import argparse
 import pathlib
 import numpy as np
+from fs.osfs import OSFS
+
+MODEL_FS = None
+RAW_DATA_PATH = 'raw_data/'
+RESULT_DATA_PATH = 'result_data/'
+RAW_DATA_FILE_EXTENSION = '*.csv'
 
 
 def _get_file_list(pure_path, match):
@@ -25,8 +31,9 @@ def _get_file_list(pure_path, match):
             pure_path: pure path without file name
             match:file name with wildcard, for example, *.csv, some*.csv
     '''
-    path = pathlib.Path(pure_path)
-    return path.glob(match)
+    path = pathlib.Path(pure_path)    
+    filelist = path.glob(match)
+    return filelist
 #
 def _get_prediction_sequence(filename, sequence_length, sequence):
     ''' From sequence extracte the prediction sequence which length is sequence_length
@@ -106,10 +113,8 @@ def _combinate_example(total_examples, other_examples):
         raise ValueError("The both two parameter must be a list!")
     for _line in other_examples:
         total_examples.append(_line)
-    return total_examples
-def _convert_data_to_example(sequence_length,
-                             raw_pure_path, match,
-                             result_pure_path):
+
+def _convert_data_to_example(sequence_length, path, match):
     ''' All the file in raw_pure_path will be converted to the four parts
         The first part is about the examples for train
         The second part is about the example for valid
@@ -120,11 +125,11 @@ def _convert_data_to_example(sequence_length,
         The first three parts will be stored in csv format
         The last part will be stored in json for being easy to search
     '''
-    files = _get_file_list(raw_pure_path, match)
-    if len(files) == 0:
+    files = _get_file_list(path, match)
+    if len(list(files)) == 0:
         raise ValueError('There are any files specified by parameter raw_pure_path and match')
     prediction_sequence = {} #store sequence for prediction
-    _examples_ = []#store the first three
+    _examples = []#store the first three
     for filename in files:
         _lines = []
         with open(filename, mode='r') as _file:
@@ -135,29 +140,25 @@ def _convert_data_to_example(sequence_length,
         prediction_sequence[_key] = value
         #for the first three
         _examples_ = _make_examples(sequence_length, _lines[sequence_length:])
-        _examples = _combinate_example(_examples, _examples_)
+        _combinate_example(_examples, _examples_)
 
 
 # main control
 def main(args):
     ''' main control flow
     '''
-    print("3800 / 400", 3800 / 400)
-    print("3800 // 400", 3800 // 400)
-    print("3800 % 400", 3800 % 400)
-    print(isinstance([[2], [1]], list))
+    
+    MODEL_FS = OSFS(args.data_path)
+    #_convert_data_to_example(args.Sequence_length, args.data_path + RAW_DATA_PATH, RAW_DATA_FILE_EXTENSION)
+    MODEL_FS.close()
 #
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--raw_data_path",
-                        help="raw data path",
+    parser.add_argument("--data_path",
+                        help="data path",
                         type=str,
-                        default='data/raw_data')
-    parser.add_argument("--result_data_path",
-                        help="result data path",
-                        type=str,
-                        default='data/result_data')
+                        default='data/')
     parser.add_argument("--convert", "-Con", action='store_true',
                         help="convert all the raw file to fileexamples")
     parser.add_argument("--Sequence_length", "-Length",
