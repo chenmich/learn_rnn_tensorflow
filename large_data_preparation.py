@@ -100,6 +100,13 @@ def _save_examples(examples, pure_path):
     '''
 
     pass
+#
+def _combinate_example(total_examples, other_examples):
+    if not isinstance(total_examples, list) or not isinstance(other_examples, list):
+        raise ValueError("The both two parameter must be a list!")
+    for _line in other_examples:
+        total_examples.append(_line)
+    return total_examples
 def _convert_data_to_example(sequence_length,
                              raw_pure_path, match,
                              result_pure_path):
@@ -127,9 +134,9 @@ def _convert_data_to_example(sequence_length,
         _key, value = _get_prediction_sequence(filename, sequence_length, _lines)
         prediction_sequence[_key] = value
         #for the first three
-        _examples = _make_examples(sequence_length, _lines[sequence_length:])
-        for _example in _examples:#store by sequence
-            _examples_.append(_example)
+        _examples_ = _make_examples(sequence_length, _lines[sequence_length:])
+        _examples = _combinate_example(_examples, _examples_)
+
 
 # main control
 def main(args):
@@ -138,7 +145,7 @@ def main(args):
     print("3800 / 400", 3800 / 400)
     print("3800 // 400", 3800 // 400)
     print("3800 % 400", 3800 % 400)
-
+    print(isinstance([[2], [1]], list))
 #
 
 if __name__ == "__main__":

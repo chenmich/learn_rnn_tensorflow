@@ -40,6 +40,22 @@ class test_save_example(unittest.TestCase):
     ''' Test _save_examples function in the large_data_preparation module
         https://github.com/PyFilesystem/pyfilesystem
     '''
-    
+    pass
+#
+class test_combinate_examples(unittest.TestCase):
+    def test_combinate_examples(self):
+        examples = np.arange(10000).reshape(2000, 5).tolist()
+        _examples = np.arange(2000).reshape(400, 5).tolist()
+        #test result of combination
+        _length = len(examples)
+        _other_length = len(_examples)
+        examples = ldp._combinate_example(examples, _examples)
+        total_length = len(examples)
+        self.assertEqual(total_length, _length + _other_length)
+        #test parameter
+        with self.assertRaises(ValueError) as context:
+            ldp._combinate_example(examples, 2)
+            ldp._combinate_example(3, _examples)
+
 if __name__ == "__main__":
     unittest.main()
