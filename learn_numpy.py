@@ -61,16 +61,30 @@ g_array = np.reshape(f_array, [2, -1])
 
 data = dr.non_linear_parabolic_curve_map_data_reader()
 _count = itertools.count(5,1)
-print(_count)
-
-print(5/2)
-print(5%2)
-print(5//2)
-
+#print(_count)
 
 r_state = np.random.RandomState(seed=None)
 _decision = r_state.random_sample()
 print(_decision)
+
+h = [
+        [
+            [1, 2, 3, 4, 5],
+            [6, 7, 8, 9, 10],
+            [21, 22, 23, 24, 25]
+        ],
+        [
+            [11, 12, 13, 14, 15],
+            [16, 17, 18, 19, 20],
+            [26, 27, 28, 29, 30]
+        ]
+    ]
+h_array = np.array(h)
+
+mean = np.mean(h_array)
+print(mean)
+print(h_array.shape)
+print(h_array[0:, 0:, 0:4])
 
 
 
