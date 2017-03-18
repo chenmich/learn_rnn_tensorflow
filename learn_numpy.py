@@ -4,6 +4,7 @@ import datetime
 from datetime import date
 import itertools
 import data_reader as dr
+from datetime import time
 
 
 
@@ -66,19 +67,10 @@ print(5/2)
 print(5%2)
 print(5//2)
 
-train_count = 0
-valid_count = 0
-test_count = 0
-sample_size = 100000
-for _ in range(sample_size):
-    x = np.random.randint(1, 10000)
-    if x < 6000 and x >= 1:
-        train_count += 1
-    if x >= 6000 and x < 8000:
-        valid_count += 1
-    if x >= 8000:
-        test_count += 1
-print(train_count / sample_size, valid_count / sample_size, test_count / sample_size)
+
+r_state = np.random.RandomState(seed=None)
+_decision = r_state.random_sample()
+print(_decision)
 
 
 

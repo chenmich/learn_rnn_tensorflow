@@ -14,6 +14,8 @@
 # ==============================================================================
 ''' This module make examples from sequence data
 '''
+from datetime import datetime
+import json
 import argparse
 import numpy as np
 from fs.osfs import OSFS
@@ -86,7 +88,7 @@ def _make_examples(sequence_length, sequence):
         _examples.append(_target)
     return _examples
 #
-def _save_examples(examples, pure_path):
+def _save_examples(fsys, examples):
     ''' Write the examples to a few file of csv format
         The csv file can have one million lines
         All the lines will dived  sequence of groups of examples
@@ -103,9 +105,9 @@ def _save_examples(examples, pure_path):
         In above group of example,
         the input sequence is consist of the first two lines,
         and the target sequenc is consist of the esecond tow lines.
-        There are another group before and after the group.
+        There are other groups before and after the group.
+        This function will save the data for train, valid and test
     '''
-
     pass
 #
 def _combinate_example(total_examples, other_examples):
@@ -113,6 +115,29 @@ def _combinate_example(total_examples, other_examples):
         raise ValueError("The both two parameter must be a list!")
     for _line in other_examples:
         total_examples.append(_line)
+#
+def _make_decision_(seed=None):
+    _seed = None
+    if seed is None:
+        _seed = datetime.now().microsecond()
+    else:
+        _seed = seed
+    r_state = np.random.RandomState(_seed)
+    _decision = r_state.random_sample()
+    if _decision >= 0.0 and _decision < 0.6:#train
+        return 0
+    if _decision >= 0.6 and _decision < 0.8:#valid
+        return 1
+    if _decision <= 1.0:#test
+        return 2
+def _save_prediction_sequence(fsys, prediction_sequence):
+    ''' This function will save the data for prediction
+        the file format is json
+    '''
+    with fsys.open('data/result_data/' + 'prediction_sequence.json',
+                   mode='w') as jsonfile:
+        json.dump(prediction_sequence, jsonfile)
+#
 
 def _convert_data_to_example(fsys, sequence_length, path, match):
     ''' All the file in raw_pure_path will be converted to the four parts
@@ -138,10 +163,11 @@ def _convert_data_to_example(fsys, sequence_length, path, match):
         #for prediction
         _key, value = _get_prediction_sequence(filename, sequence_length, _lines)
         prediction_sequence[_key] = value
+        _save_prediction_sequence(fsys, prediction_sequence)
         #for the first three
         _examples_ = _make_examples(sequence_length, _lines[sequence_length:])
         _combinate_example(_examples, _examples_)
-
+        _save_examples(fsys, _examples)
 
 
 # main control

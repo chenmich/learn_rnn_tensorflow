@@ -15,6 +15,7 @@
 ''' Test large-data-preparation module
 '''
 import unittest
+import json
 import csv
 import numpy as np
 from fs import memoryfs
@@ -98,19 +99,20 @@ class test_save_examples(unittest.TestCase):
     ''' test _save_example function with pyfilesystem
     '''
     def setUp(self):
-        self._fsys = get_fsys()
-    def test_prediction(self):
-        ''' test if prediction is correctly writtern into a file
-            the format is json
+        ''' built file system with memoryfs
         '''
+        self._fsys = get_fsys()
+    def test_train_dataset(self):
         pass
 #
-class test_get_prediction_sequence(unittest.TestCase):
+class test_prediction_sequence(unittest.TestCase):
     ''' test function _get_prediction_sequence with memoryfs
     '''
     def setUp(self):
         self._fsys = get_fsys()
-    def test_prediction_sequence(self):
+    def test_get_prediction_sequence(self):
+        ''' test _get_prediction-sequence function with memoryfs
+        '''
         files = ldp._get_file_list(self._fsys, 'data/raw_data/', '*.csv')
         sequence_length = 200
         key = None
@@ -121,14 +123,30 @@ class test_get_prediction_sequence(unittest.TestCase):
             _sequence = []
             for _line in reader:
                 _sequence.append(_line)
-            
+
             key, sequence = ldp._get_prediction_sequence(filename,
                                                          sequence_length,
                                                          _sequence)
-             
+
             self.assertEqual(key, filename.split('.')[0])
             self.assertEqual(len(sequence), sequence_length)
-        
+    def test_save_prediction_sequence(self):
+        ''' test _save_prediction_sequence function with memoryfs
+        '''
+        sequence_length = 200
+        feature_size = 5
+        _prediction_sequence = {"some000000":np.arange(sequence_length*feature_size)
+                                             .reshape(sequence_length, feature_size).tolist(),
+                                "some000001":np.arange(sequence_length*feature_size,
+                                                       2*sequence_length*feature_size)
+                                             .reshape(sequence_length, feature_size).tolist()}
+        ldp._save_prediction_sequence(self._fsys, _prediction_sequence)
+        with self._fsys.open('data/result_data/' + 'prediction_sequence.json',
+                             mode='r') as jsonfile:
+            _pr_seq = json.load(jsonfile)
+        self.assertEqual(len(_pr_seq['some000000']), 200)
+        self.assertEqual(len(_pr_seq['some000001']), 200)
+
 
 if __name__ == "__main__":
     unittest.main()
