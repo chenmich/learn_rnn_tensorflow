@@ -16,6 +16,7 @@
 '''
 from datetime import datetime
 import json
+import csv
 import argparse
 import numpy as np
 from fs.osfs import OSFS
@@ -108,7 +109,9 @@ def _save_examples(fsys, examples):
         There are other groups before and after the group.
         This function will save the data for train, valid and test
     '''
-    pass
+    '''_csvfile = fsys.open('data/result_data/' + 'train_data.csv', mode='a')
+    _train_writer = csv.writer(_csvfile)
+    _csvfile = fsys.open()'''
 #
 def _combinate_example(total_examples, other_examples):
     if not isinstance(total_examples, list) or not isinstance(other_examples, list):
@@ -134,7 +137,7 @@ def _save_prediction_sequence(fsys, prediction_sequence):
     ''' This function will save the data for prediction
         the file format is json
     '''
-    with fsys.open('data/result_data/' + 'prediction_sequence.json',
+    with fsys.open(RESULT_DATA_PATH + 'prediction_sequence.json',
                    mode='w') as jsonfile:
         json.dump(prediction_sequence, jsonfile)
 #
@@ -176,6 +179,7 @@ def main(args):
     '''
     SEQUENCE_LENGTH = ARGS.Sequence_length
     MODEL_DATA_FS = OSFS(args.data_path)
+    MODEL_DATA_FS.tree()
     #_convert_data_to_example(args.Sequence_length, args.data_path + RAW_DATA_PATH, RAW_DATA_FILE_EXTENSION)
     MODEL_DATA_FS.close()
 #

@@ -35,6 +35,7 @@ def get_fsys():
     _raw_data = np.arange(20000).reshape(4000, 5).tolist()
     filenames = ['some00000.csv', 'some00001.csv', 'some00002.csv',
                  'some00003.csv', 'some00004.csv']
+
     for _file in filenames:
         with model_data_fs.open('data/raw_data/' + _file, mode='w') as csvfile:
             writer = csv.writer(csvfile)
@@ -140,7 +141,9 @@ class test_prediction_sequence(unittest.TestCase):
                                 "some000001":np.arange(sequence_length*feature_size,
                                                        2*sequence_length*feature_size)
                                              .reshape(sequence_length, feature_size).tolist()}
-        ldp._save_prediction_sequence(self._fsys, _prediction_sequence)
+        _tmp_fsys = self._fsys.opendir('data')
+        ldp._save_prediction_sequence(_tmp_fsys, _prediction_sequence)
+        _tmp_fsys.close()
         with self._fsys.open('data/result_data/' + 'prediction_sequence.json',
                              mode='r') as jsonfile:
             _pr_seq = json.load(jsonfile)
