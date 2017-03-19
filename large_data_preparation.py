@@ -224,11 +224,9 @@ def main(args):
     SEQUENCE_LENGTH = args.Sequence_length
     FEATURE_SIZE = args.Feature_size
     MODEL_DATA_FS = OSFS(args.data_path)
-
     #_convert_data_to_example(SEQUENCE_LENGTH, args.data_path + RAW_DATA_PATH, RAW_DATA_FILE_EXTENSION)
     MODEL_DATA_FS.close()
 #
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_path",

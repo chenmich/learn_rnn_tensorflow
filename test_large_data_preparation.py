@@ -94,11 +94,6 @@ class test_combinate_examples(unittest.TestCase):
 class test_get_file_list(unittest.TestCase):
     ''' test the _get_file_list with memoryfs
     '''
-    def setUp(self):
-        self._fsys = get_fsys()
-    def tearDown(self):
-        self._fsys.close()
-
     def test_result(self):
         ''' Test gotten file list
         '''
@@ -111,24 +106,16 @@ class test_get_file_list(unittest.TestCase):
 class test_save_examples(unittest.TestCase):
     ''' test _save_example function with pyfilesystem
     '''
-    def setUp(self):
-        ''' built file system with memoryfs
-        '''
-        self._fsys = get_fsys()
-    def tearDown(self):
-        self._fsys.close()
     def test_train_dataset(self):
         ''' Test save train data
         '''
+        
+
         raise ValueError("un-complemented!")
 #
 class test_prediction_sequence(unittest.TestCase):
     ''' test function _get_prediction_sequence with memoryfs
     '''
-    def setUp(self):
-        self._fsys = get_fsys()
-    def tearDown(self):
-        self._fsys.close()
     def test_get_prediction_sequence(self):
         ''' test _get_prediction-sequence function with memoryfs
         '''
@@ -168,3 +155,4 @@ class test_prediction_sequence(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    ldp.MODEL_DATA_FS.close()
