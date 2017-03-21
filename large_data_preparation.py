@@ -193,7 +193,7 @@ def _convert_data_to_example(path, match):
         The first three parts will be stored in csv format
         The last part will be stored in json for being easy to search
     '''
-    files = _get_file_list(MODEL_DATA_FS, path, match)
+    files = _get_file_list(path, match)
     if len(list(files)) == 0:
         raise ValueError('There are any files specified by parameter raw_pure_path and match')
     prediction_sequence = {} #store sequence for prediction
