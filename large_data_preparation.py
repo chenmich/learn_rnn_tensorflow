@@ -207,13 +207,13 @@ def _convert_data_to_example(path, match):
         #for prediction
         _key, value = _get_prediction_sequence(filename, _lines)
         prediction_sequence[_key] = value
-        _save_prediction_sequence(MODEL_DATA_FS, prediction_sequence)
+        _save_prediction_sequence(prediction_sequence)
         #for the first three
         _examples_ = _make_examples(_lines[SEQUENCE_LENGTH:])
         _combinate_example(_tmp, _examples_)
 
     price_mean, price_std, volumn_mean, volumn_std = _get_statistical_data(_tmp)
-    _save_examples(MODEL_DATA_FS, _examples)
+    _save_examples(_examples)
 
 
 
