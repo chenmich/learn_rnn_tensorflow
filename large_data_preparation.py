@@ -170,7 +170,7 @@ def _save_prediction_sequence(prediction_sequence):
         the file format is json
     '''
     with MODEL_DATA_FS.open(RESULT_DATA_PATH + 'prediction_sequence.json',
-                   mode='w') as jsonfile:
+                            mode='w') as jsonfile:
         json.dump(prediction_sequence, jsonfile)
 #
 def _get_statistical_data(examples):
@@ -217,6 +217,26 @@ def _convert_data_to_example(path, match):
 
 
 
+#refactor to oriented-object
+class InputData():
+    ''' This class is for preparation of model data
+        At least, this class must convert the csv format to tfrecord format
+    '''
+    def __init__(self, fsys_data, max_step, feature_size):
+        self.__fsys_data__ = fsys_data
+        self.__max_step__ = max_step
+        self.__feature_size__ = feature_size
+        self._default_raw_data_dir = 'raw_data'
+        self._default_result_data_dir = 'result_data/' + str(max_step)
+    def _make_examples(self):
+        files = self._getRawDataFiles()
+        
+    def _getRawDataFiles(self):
+        ''' This function get all the files in specified raw data dir
+        '''
+        pass
+
+
 # main control
 def main(args):
     ''' main control flow
@@ -224,7 +244,9 @@ def main(args):
     SEQUENCE_LENGTH = args.Sequence_length
     FEATURE_SIZE = args.Feature_size
     MODEL_DATA_FS = OSFS(args.data_path)
-    #_convert_data_to_example(SEQUENCE_LENGTH, args.data_path + RAW_DATA_PATH, RAW_DATA_FILE_EXTENSION)
+    #_convert_data_to_example(
+#       SEQUENCE_LENGTH, args.data_path + RAW_DATA_PATH,
+#        RAW_DATA_FILE_EXTENSION)
     MODEL_DATA_FS.close()
 #
 if __name__ == "__main__":
