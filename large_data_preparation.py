@@ -222,46 +222,100 @@ class InputData():
     ''' This class is for preparation of model data
         At least, this class must convert the csv format to tfrecord format
     '''
-    def __init__(self, fsys_data, max_step, feature_size):
+    def __init__(self, fsys_data, max_step, feature_size, raw_file_wildcard=None):
         self.__fsys_data__ = fsys_data
         self.__max_step__ = max_step
         self.__feature_size__ = feature_size
         self._default_raw_data_dir = 'raw_data'
         self._default_result_data_dir = 'result_data/' + str(max_step)
+        if raw_file_wildcard is None:
+            self._raw_file_wildcard = '*.csv'
+        else:
+            self._raw_file_wildcard = raw_file_wildcard
+    #
     def _make_examples(self):
-        files = self._getRawDataFiles()
-        
-    def _getRawDataFiles(self):
-        ''' This function get all the files in specified raw data dir
+        files = self._get_raw_data_files(self._raw_file_wildcard)
+        #The examples for prediction will save to file of json file format
+        prediction_examples = {}
+        _lines = []
+        for raw_file in files:
+            with self.__fsys_data__.open(raw_file, mode='r') as rawfile:
+                reader = csv.reader(rawfile)
+                for _line in reader:
+                    _lines.append(_line)
+            #prepare the examples for prediction
+            key, raw_for_prediction = self._make_examples_for_prediction(_lines, raw_file)
+            prediction_examples[key] = raw_for_prediction
+            self._make_examples_for_train(_lines[self.__max_step__:])
+
+        #svae the examples for prediction
+        #the mount of this file is not too large,
+        #so save it until all the examples has been ready
+        #this method will save all the examples
+        self._save_examples_for_prediction(prediction_examples)
+    #
+    def _make_examples_for_prediction(self, lines, file_name):
+        ''' The raw data will be divided to four parts. one of the four parts is for prediction 
+            for real price
+            This method is make all the examples for prediction
+            args:
+                lines: The all lines of one of all the raw files.
+                       The first max_step lines is for prediction
+                file_name: file name with extension of a raw file
+                           the file name is key dictionary for examples for prediction
         '''
-        pass
+        raise Exception('the Method _make_examples_for_prediction is not impletmneted!')
+    #
+    def _save_examples_for_prediction(self, prediction_examples):
+        ''' The examples for prediction will be saved in json format
+            arg:
+                prediction_examples: a dict type
+        '''
+        raise Exception('The Method _save_prediction_sequence is not impletmented!')
+    #
+    def _get_raw_data_files(self, file_wildcard):
+        ''' This method get all the files in specified raw data dir
+        '''
+        _filelist = list(self.__fsys_data__.filterdir(
+            self._default_raw_data_dir,
+            files=[self._raw_file_wildcard])
+                        )
+        filelist = [x.name for x in _filelist]
+        return filelist
+    #
+    def _make_examples_for_train(self, lines):
+        ''' The examples for train are consist of the three parts.
+            The first part is for train. The second part is for valid for fine adjustment
+            of the hyperparameter. And the third part is for test of model
+            This method will divide the lines into the three parts
+            This method will save all the examples, so there is no return values
+            args:
+                lines: all the raw data in list
+        '''
+        raise Exception('The method _make_examples_for_train is not impletmented!')
 
 
 # main control
 def main(args):
     ''' main control flow
     '''
-    SEQUENCE_LENGTH = args.Sequence_length
-    FEATURE_SIZE = args.Feature_size
-    MODEL_DATA_FS = OSFS(args.data_path)
-    #_convert_data_to_example(
-#       SEQUENCE_LENGTH, args.data_path + RAW_DATA_PATH,
-#        RAW_DATA_FILE_EXTENSION)
-    MODEL_DATA_FS.close()
-#
+    fsys_for_data = OSFS(args.data_path)
+    inputdata = InputData(fsys_for_data, args.max_step, args.feature_size) 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_path",
                         help="data path",
                         type=str,
-                        default='data/')
+                        default='data')
     parser.add_argument("--convert", "-Con", action='store_true',
                         help="convert all the raw file to fileexamples")
-    parser.add_argument("--Sequence_length", "-Length",
+    parser.add_argument("--Max_step", "-MS",
                         default=200,
-                        help='the sequence length in a example')
-    parser.add_argument("--Feature_size", "F_size",
+                        help='the Max number for time step in a example')
+    parser.add_argument("--Feature_size", "-F_size",
                         help='The number of feature in one example',
                         default=5)
+    parser.add_argument("--file_wildcard", "-FE", help="the wildcard name of raw data file",
+                        default='*.csv')
     ARGS = parser.parse_args()
     main(ARGS)

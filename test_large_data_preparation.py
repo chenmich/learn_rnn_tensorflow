@@ -44,33 +44,28 @@ def get_fsys():
     return model_data_fs.opendir('data')
 
 #
-SEQUENCE_LENGTH = 200
+MAX_STEP = 200
 FEATURE_SIZE = 5
 MODEL_DATA_FS = get_fsys()
+FILE_WILDCARD = '*.csv'
+NUM_RAW_FILES = 5
 #
 
-
-
 #test InputData class
-class test_make_example(tf.test.TestCase):
-    ''' test the InputData class
+class test_get_raw_data_files(tf.test.TestCase):
+    ''' test the method of InputData class
     '''
-    def test_call_get_raw_data_file_list(self):
-        inputData = InputDataOne(MODEL_DATA_FS,
-                                 SEQUENCE_LENGTH,
-                                 FEATURE_SIZE)
-        with self.assertRaises(Exception):
-            inputData._make_examples()
-
-
-
-
-class InputDataOne(ldp.InputData):
-    ''' I will make use of this class to test _make_example 
-    '''
-    def _getRawDataFiles(self):
-        raise Exception("_getRawDataaFiles function was called!")
-
+    def test_returned_value(self):
+        ''' valid returned value
+        '''
+        inputdata = ldp.InputData(MODEL_DATA_FS, MAX_STEP, FEATURE_SIZE)
+        files = inputdata._get_raw_data_files(FILE_WILDCARD)
+        self.assertEqual(len(files), NUM_RAW_FILES)
+        self.assertEqual(files[0], 'some00000.csv')
+        self.assertEqual(files[1], 'some00001.csv')
+        self.assertEqual(files[2], 'some00002.csv')
+        self.assertEqual(files[3], 'some00003.csv')
+        self.assertEqual(files[4], 'some00004.csv')
 
 if __name__ == "__main__":
     tf.test.main()
