@@ -53,7 +53,7 @@ NUM_RAW_FILES = 5
 
 #test InputData class
 class test_get_raw_data_files(tf.test.TestCase):
-    ''' test the method of InputData class
+    ''' test the method of InputData' method _get_raw_data_files
     '''
     def test_returned_value(self):
         ''' valid returned value
@@ -66,7 +66,22 @@ class test_get_raw_data_files(tf.test.TestCase):
         self.assertEqual(files[2], 'some00002.csv')
         self.assertEqual(files[3], 'some00003.csv')
         self.assertEqual(files[4], 'some00004.csv')
+#
+class test_content_not_enough(tf.test.TestCase):
+    '''test the method of _content_not_enough
+    '''
+    pass
+#
+class test_make_examples(tf.test.TestCase):
+    '''test the method _make_examples
+    '''
+    def test_for_content_not_enough(self):
+        with MODEL_DATA_FS.open('some00006.csv', mode='w') as raw_file:
+            writer = csv.writer(raw_file)
+            lines = np.arange(MAX_STEP - 1, FEATURE_SIZE)
+
 
 if __name__ == "__main__":
     tf.test.main()
-    ldp.MODEL_DATA_FS.close()
+    MODEL_DATA_FS.close()
+    print('ok!')

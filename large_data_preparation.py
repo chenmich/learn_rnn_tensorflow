@@ -20,6 +20,7 @@ import csv
 import argparse
 import numpy as np
 from fs.osfs import OSFS
+import rnn_model_exception as mexception
 
 MODEL_DATA_FS = None
 RAW_DATA_PATH = 'raw_data/'
@@ -27,6 +28,8 @@ RESULT_DATA_PATH = 'result_data/'
 RAW_DATA_FILE_EXTENSION = '*.csv'
 SEQUENCE_LENGTH = None
 FEATURE_SIZE = None
+
+
 
 
 def _get_file_list(pure_path, match):
@@ -38,17 +41,7 @@ def _get_file_list(pure_path, match):
     _filelist = list(MODEL_DATA_FS.filterdir(pure_path, files=[match]))
     filelist = [x.name for x in _filelist]
     return filelist
-#
-def _get_prediction_sequence(filename, sequence):
-    ''' From sequence extracte the prediction sequence which length is sequence_length
-        From filename extracte the key which is file's name without suffix
-    '''
-    if len(sequence) < SEQUENCE_LENGTH:
-        raise ValueError("The seqence is short for demand!")
-    _key = filename.split('.')[0]
-    _prediction_sequence = sequence[0:SEQUENCE_LENGTH]
-    _prediction_sequence.reverse()
-    return _key, _prediction_sequence
+
 #
 def _make_examples(sequence):
     ''' Convert the sequence to examples which length is sequence_length
@@ -173,6 +166,8 @@ def _save_prediction_sequence(prediction_sequence):
                             mode='w') as jsonfile:
         json.dump(prediction_sequence, jsonfile)
 #
+def _get_prediction_sequence(filename, sequence):
+    return filename, sequence
 def _get_statistical_data(examples):
     examples_array = np.array(examples)
     price_array = examples_array[:, 0:4]
@@ -214,9 +209,6 @@ def _convert_data_to_example(path, match):
 
     price_mean, price_std, volumn_mean, volumn_std = _get_statistical_data(_tmp)
     _save_examples(_examples)
-
-
-
 #refactor to oriented-object
 class InputData():
     ''' This class is for preparation of model data
@@ -228,13 +220,22 @@ class InputData():
         self.__feature_size__ = feature_size
         self._default_raw_data_dir = 'raw_data'
         self._default_result_data_dir = 'result_data/' + str(max_step)
+        self._default_log_file_ = 'log.txt'
         if raw_file_wildcard is None:
             self._raw_file_wildcard = '*.csv'
         else:
             self._raw_file_wildcard = raw_file_wildcard
     #
     def _make_examples(self):
+        ''' This method will divided raw to four parts
+            The first part of the parts is for train of model
+            The second part of the parts is for valid of model
+            The third part of the parts is for test of model
+            The fouth of the parts will be used to predict the future value
+        '''
+        #
         files = self._get_raw_data_files(self._raw_file_wildcard)
+
         #The examples for prediction will save to file of json file format
         prediction_examples = {}
         _lines = []
@@ -243,6 +244,11 @@ class InputData():
                 reader = csv.reader(rawfile)
                 for _line in reader:
                     _lines.append(_line)
+            try:
+                self._data_check(_lines)
+            except:
+                pass
+
             #prepare the examples for prediction
             key, raw_for_prediction = self._make_examples_for_prediction(_lines, raw_file)
             prediction_examples[key] = raw_for_prediction
@@ -255,7 +261,7 @@ class InputData():
         self._save_examples_for_prediction(prediction_examples)
     #
     def _make_examples_for_prediction(self, lines, file_name):
-        ''' The raw data will be divided to four parts. one of the four parts is for prediction 
+        ''' The raw data will be divided to four parts. one of the four parts is for prediction
             for real price
             This method is make all the examples for prediction
             args:
@@ -293,14 +299,21 @@ class InputData():
                 lines: all the raw data in list
         '''
         raise Exception('The method _make_examples_for_train is not impletmented!')
-
+    #
+    def _data_check(self, filename):
+        ''' process the problem that the lines of one file are less max_step!
+            args:
+            filename:the name of file that lines are not enough
+        '''
+        raise Exception('The method _content_not_enough is not impletmented!')
 
 # main control
 def main(args):
     ''' main control flow
     '''
     fsys_for_data = OSFS(args.data_path)
-    inputdata = InputData(fsys_for_data, args.max_step, args.feature_size) 
+    inputdata = InputData(fsys_for_data, args.max_step, args.feature_size)
+    inputdata._make_examples()
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_path",
@@ -309,10 +322,10 @@ if __name__ == "__main__":
                         default='data')
     parser.add_argument("--convert", "-Con", action='store_true',
                         help="convert all the raw file to fileexamples")
-    parser.add_argument("--Max_step", "-MS",
+    parser.add_argument("--max_step", "-MS",
                         default=200,
                         help='the Max number for time step in a example')
-    parser.add_argument("--Feature_size", "-F_size",
+    parser.add_argument("--feature_size", "-F_size",
                         help='The number of feature in one example',
                         default=5)
     parser.add_argument("--file_wildcard", "-FE", help="the wildcard name of raw data file",
