@@ -20,7 +20,7 @@ import csv
 import argparse
 import numpy as np
 from fs.osfs import OSFS
-import rnn_model_exception as mexception
+import rnn_model_exception
 
 MODEL_DATA_FS = None
 RAW_DATA_PATH = 'raw_data/'
@@ -28,19 +28,6 @@ RESULT_DATA_PATH = 'result_data/'
 RAW_DATA_FILE_EXTENSION = '*.csv'
 SEQUENCE_LENGTH = None
 FEATURE_SIZE = None
-
-
-
-
-def _get_file_list(pure_path, match):
-    ''' return all the file by matching parameter match in pure_path' folder
-        Arg:
-            pure_path: pure path without file name
-            match:file name with wildcard, for example, *.csv, some*.csv
-    '''
-    _filelist = list(MODEL_DATA_FS.filterdir(pure_path, files=[match]))
-    filelist = [x.name for x in _filelist]
-    return filelist
 
 #
 def _make_examples(sequence):
@@ -218,49 +205,37 @@ class InputData():
         self.__fsys_data__ = fsys_data
         self.__max_step__ = max_step
         self.__feature_size__ = feature_size
-        self._default_raw_data_dir = 'raw_data'
-        self._default_result_data_dir = 'result_data/' + str(max_step)
-        self._default_log_file_ = 'log.txt'
+        self.__default_raw_data_dir__ = 'raw_data/'
+        self.__default_result_data_dir__ = 'result_data/' + str(max_step)
+        self.__default_log_file__ = 'log.txt'
         if raw_file_wildcard is None:
-            self._raw_file_wildcard = '*.csv'
+            self.__raw_file_wildcard__ = '*.csv'
         else:
-            self._raw_file_wildcard = raw_file_wildcard
+            self.__raw_file_wildcard__ = raw_file_wildcard
     #
-    def _make_examples(self):
+    def make_examples(self):
         ''' This method will divided raw to four parts
             The first part of the parts is for train of model
             The second part of the parts is for valid of model
             The third part of the parts is for test of model
             The fouth of the parts will be used to predict the future value
         '''
-        #
-        files = self._get_raw_data_files(self._raw_file_wildcard)
-
         #The examples for prediction will save to file of json file format
+        files = self._get_raw_data_files()
         prediction_examples = {}
         _lines = []
         for raw_file in files:
-            with self.__fsys_data__.open(raw_file, mode='r') as rawfile:
-                reader = csv.reader(rawfile)
-                for _line in reader:
-                    _lines.append(_line)
-            try:
-                self._data_check(_lines)
-            except:
-                pass
+            #if comptible, _lines will be converted to float after _raw_data_check is called
+            if self._raw_data_check(raw_file):
+                self._make_examples_for_prediction(_lines[0:self.__max_step__],
+                                                   raw_file.split()[0])
+                self._make_examples_for_train(_lines[self.__max_step__:],
+                                              raw_file.split()[0])
 
-            #prepare the examples for prediction
-            key, raw_for_prediction = self._make_examples_for_prediction(_lines, raw_file)
-            prediction_examples[key] = raw_for_prediction
-            self._make_examples_for_train(_lines[self.__max_step__:])
 
-        #svae the examples for prediction
-        #the mount of this file is not too large,
-        #so save it until all the examples has been ready
-        #this method will save all the examples
-        self._save_examples_for_prediction(prediction_examples)
+
     #
-    def _make_examples_for_prediction(self, lines, file_name):
+    def _make_examples_for_prediction(self, lines, token):
         ''' The raw data will be divided to four parts. one of the four parts is for prediction
             for real price
             This method is make all the examples for prediction
@@ -279,17 +254,17 @@ class InputData():
         '''
         raise Exception('The Method _save_prediction_sequence is not impletmented!')
     #
-    def _get_raw_data_files(self, file_wildcard):
+    def _get_raw_data_files(self):
         ''' This method get all the files in specified raw data dir
         '''
         _filelist = list(self.__fsys_data__.filterdir(
-            self._default_raw_data_dir,
-            files=[self._raw_file_wildcard])
+            self.__default_raw_data_dir__,
+            files=[self.__raw_file_wildcard__])
                         )
         filelist = [x.name for x in _filelist]
         return filelist
     #
-    def _make_examples_for_train(self, lines):
+    def _make_examples_for_train(self, lines, token):
         ''' The examples for train are consist of the three parts.
             The first part is for train. The second part is for valid for fine adjustment
             of the hyperparameter. And the third part is for test of model
@@ -300,26 +275,31 @@ class InputData():
         '''
         raise Exception('The method _make_examples_for_train is not impletmented!')
     #
-    def _data_check(self, filename):
+    def _raw_data_check(self, filename):
+        # This method's responsibility must be carefully analysis
+        # This will affect the _make_examples method' design
+        # This method's resposibilities are to make sure that number of lines is enough
+        # and that the string can be converted to number
+        # If it is not comptible, this method log it
         ''' process the problem that the lines of one file are less max_step!
+            process the porble that some data of price and volumn can be converted float
             args:
-            filename:the name of file that lines are not enough
+                lines: lines of data. It is a list
         '''
-        raise Exception('The method _content_not_enough is not impletmented!')
-
+        raise Exception("The method _raw_data_check is not impletmented!")
 # main control
 def main(args):
     ''' main control flow
     '''
     fsys_for_data = OSFS(args.data_path)
     inputdata = InputData(fsys_for_data, args.max_step, args.feature_size)
-    inputdata._make_examples()
+    inputdata.make_examples()
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_path",
                         help="data path",
                         type=str,
-                        default='data')
+                        default='data/')
     parser.add_argument("--convert", "-Con", action='store_true',
                         help="convert all the raw file to fileexamples")
     parser.add_argument("--max_step", "-MS",
