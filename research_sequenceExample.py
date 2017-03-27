@@ -30,9 +30,9 @@ context_features = {
 }
 sequence_features = {
     "tokens0": tf.FixedLenSequenceFeature([], dtype=tf.float32),
-    "labels0": tf.FixedLenSequenceFeature([], dtype=tf.float32), 
+    "labels0": tf.FixedLenSequenceFeature([], dtype=tf.float32),
     "tokens1": tf.FixedLenSequenceFeature([], dtype=tf.float32),
-    "labels1": tf.FixedLenSequenceFeature([], dtype=tf.float32),    
+    "labels1": tf.FixedLenSequenceFeature([], dtype=tf.float32),
 }
 
 context_parsed, sequence_parsed = tf.parse_single_sequence_example(
@@ -59,7 +59,7 @@ with tf.Session() as sess:
     print("length_fea    ", sess.run(context_parsed['length_fea']))
     print("length_seq    ", sess.run(context_parsed["length_seq"]))
     print()
-    #after this code run, a python list will be gotten 
+    #after this code run, a python list will be gotten
     sequence_token0 = sess.run(sequence_parsed["tokens0"])
     print("tokens0     ", sequence_token0)
     print("tokens1     ", sess.run(sequence_parsed["tokens1"]))

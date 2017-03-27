@@ -66,10 +66,14 @@ def read_and_decode_single_example(filename):
 save_tf(tmp_filename)
 length_sequence = len(sequences)
 
-ex, context_features,sequence_features = read_and_decode_single_example(tmp_filename)
+ex, context_features, sequence_features = read_and_decode_single_example(tmp_filename)
 context_parsed, sequence_parsed = tf.parse_single_sequence_example(
     serialized=ex,
     context_features=context_features,
     sequence_features=sequence_features
 )
+
+print()
+print('===========================================')
+print(sequence_parsed)
     
