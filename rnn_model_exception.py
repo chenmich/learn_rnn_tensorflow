@@ -18,41 +18,8 @@ import sys
 class RNNModelException(Exception):
     ''' RNN model's root Exception
     '''
-class RNNModelDataNotCompatibleException(RNNModelException):
-    pass
-class RNNModelRawDataNotComptibleException(RNNModelDataNotCompatibleException):
-    ''' This class define the exception for raw data
+
+    ''' This class define the exception for data whihc can not be convert to number
     '''
-    def __init__(self, message, raw_file, row=0, column=0, *args):
-        ''' args:
-            rwa_file:the name of file which caused exception
-            row:     line in the file  which caused exception
-            column:  column in the file which caused exception
-        '''
-        self.__raw_file__ = raw_file
-        self.__row__ = row
-        self.__column__ = column
-        self.__message__ = message
-        super(RNNModelRawDataNotComptibleException, self).__init__(
-            message, raw_file, row, column, *args)
-class RNNModelDataLengthNotEnoughException(RNNModelDataNotCompatibleException):
-    def __init__(self, message, raw_file, *args):
-        self.__raw_file__ = raw_file
-        self.__message__ = message
-        self.__row__ = None
-        self.__column__ = None
-        super(RNNModelDataLengthNotEnoughException, self).__init__(raw_file, message, *args)
-class RNNModelDataContentHasNonNumberException(RNNModelDataNotCompatibleException):
     pass
 
-try:
-    raise RNNModelDataLengthNotEnoughException('a', 'some.csv')
-except RNNModelDataLengthNotEnoughException:
-    sys_info = sys.exc_info()
-    print(sys_info[1].__row__)
-
-try:
-    raise RNNModelRawDataNotComptibleException('a', 'some.csv', row=1, column=2)
-except:
-    sys_info = sys.exc_info()
-    print(sys_info[1].__row__)
