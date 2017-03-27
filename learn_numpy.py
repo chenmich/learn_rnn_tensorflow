@@ -86,5 +86,36 @@ print(mean)
 print(h_array.shape)
 print(h_array[0:, 0:, 0:4])
 
+print()
+print('====================================================')
+token = 'some_001.csv'
+print(token)
+token = token.split('.')[0]
+print(token)
+token = token.split('_')[0]
+print(token)
 
+somelist = np.arange(10)
+print(somelist)
+np.random.shuffle(somelist)
+print(somelist)
+
+somelist = ['some' + str(x) for x in range(10)]
+print(somelist)
+somelist_array = np.array(somelist)
+np.random.shuffle(somelist_array)
+print(somelist_array)
+
+some2d = np.arange(100).reshape(20,5)
+print(some2d)
+flatten_some2d = some2d.flatten()
+print(flatten_some2d)
+print(some2d)
+
+def add(a, b):
+    return a + b
+add(2, 3 )
+
+_ = add(2, 3)
+print(_)
 

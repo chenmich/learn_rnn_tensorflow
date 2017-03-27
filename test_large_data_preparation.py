@@ -90,7 +90,7 @@ class test_make_example(tf.test.TestCase):
             def _make_examples_for_prediction(self, lines, tokens):
                 self._make_examples_for_prediction_called = True
             # separat the effect of this method
-            def _make_examples_for_train(self, lines, tokens):
+            def _make_training_examples(self, lines, tokens):
                 pass
         inputdata = InputDataForTest_Pred(self.fsys, MAX_STEP, FEATURE_SIZE)
         #exercise
@@ -102,17 +102,17 @@ class test_make_example(tf.test.TestCase):
     def test_make_examples_for_train_called(self):
         # preparation for test
         class InputDataForTest_Train(ldp.InputData):
-            self._make_examples_for_train_called = False
+            self._make_training_examples_called = False
             def _raw_data_check(self, filename, lines):
                 # force to return a True fot to test if _make_examples will call the method
                 return True
             def _make_examples_for_prediction(self, lines, tokens):
                 pass
-            def _make_examples_for_train(self, lines, tokens):
-                self._make_examples_for_train_called = True
+            def _make_training_examples(self, lines, tokens):
+                self._make_training_examples_called = True
         inputdata = InputDataForTest_Train(self.fsys, MAX_STEP, FEATURE_SIZE)
         inputdata.make_examples()
-        self.assertTrue(inputdata._make_examples_for_train_called)
+        self.assertTrue(inputdata._make_training_examples_called)
 #
 class test_raw_data_check(tf.test.TestCase):
     def setUp(self):
@@ -185,6 +185,9 @@ class test_raw_data_check(tf.test.TestCase):
         self.assertEqual(error_type, rnn_model_exception.DataNotComptible.has_non_float)'''
 #
 class test_make_examples_for_prediction(tf.test.TestCase):
-    pass
+    def test_make_single_example(self):
+        class InputData_MakeSingleExample(ldp.InputData):
+            pass
+            
 if __name__ == "__main__":
     tf.test.main()

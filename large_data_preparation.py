@@ -209,6 +209,10 @@ class InputData():
         self.__default_raw_data_dir__ = 'raw_data/'
         self.__default_result_data_dir__ = 'result_data/' + 'dataset' + str(max_step) + '/'
         self.__default_log_file__ = 'logerror.txt'
+        self.__default_prediction_tfrecord__ = 'prediction.tfrecord'
+        self.__default_valid_tfrecord__ = 'valid.tfrecord'
+        self.__default_test_tfrecord__ = 'test.tfrecord'
+        self.__default_train_tfrecord__ = 'train.tfrecord'
         if raw_file_wildcard is None:
             self.__raw_file_wildcard__ = '*.csv'
         else:
@@ -223,22 +227,27 @@ class InputData():
             The second part of the parts is for valid of model
             The third part of the parts is for test of model
             The fouth of the parts will be used to predict the future value
+            And The first three parts are unified as training data
         '''
         #The examples for prediction will save to file of json file format
         files = self._get_raw_data_files()
         if len(files) == 0: return
+        #randomly shuffle the order of files
+        files_array = np.array(files)
+        np.random.shuffle(files_array)
+        files = files_array.tolist()
         prediction_examples = {}
         _lines = []
         for raw_file in files:
             # if comptible, data converted to float will be stored in _lines
             # after _raw_data_check is called
             if self._raw_data_check(raw_file, _lines):
+                token = raw_file.split('.')[0]
+                token = token.split('_')[0]
                 self._make_examples_for_prediction(_lines[0:self.__max_step__],
-                                                   raw_file.split()[0])
-                self._make_examples_for_train(_lines[self.__max_step__:],
-                                              raw_file.split()[0])
-
-
+                                                   token)
+                self._make_training_examples(_lines[self.__max_step__:],
+                                              token)
 
     #
     def _make_examples_for_prediction(self, lines, token):
@@ -251,14 +260,20 @@ class InputData():
                 file_name: file name with extension of a raw file
                            the file name is key dictionary for examples for prediction
         '''
+        ex = self.__make_tf_sequence_exameple__(token, lines)
+
         raise Exception('the Method _make_examples_for_prediction is not impletmneted!')
     #
-    def _save_examples_for_prediction(self, prediction_examples):
-        ''' The examples for prediction will be saved in json format
-            arg:
-                prediction_examples: a dict type
+    def __make_tf_sequence_exameple__(self, token, input_sequence, target_sequence=None):
+        raise Exception("The method __make_tf_sequence_exameple__ is not impletmented!")
+    #
+    def _svae_example_for_prediction(self, ex):
+        ''' This method will save example for prediction to a tfrecord file
+            args:
+            ex: an instance of class tf.train.SequenceExample
         '''
-        raise Exception('The Method _save_prediction_sequence is not impletmented!')
+
+        raise Exception('The method _svae_example_for_prediction is not impletemented!')
     #
     def _get_raw_data_files(self):
         ''' This method get all the files in specified raw data dir
@@ -270,7 +285,7 @@ class InputData():
         filelist = [x.name for x in _filelist]
         return filelist
     #
-    def _make_examples_for_train(self, lines, token):
+    def _make_training_examples(self, lines, token):
         ''' The examples for train are consist of the three parts.
             The first part is for train. The second part is for valid for fine adjustment
             of the hyperparameter. And the third part is for test of model
@@ -279,7 +294,7 @@ class InputData():
             args:
                 lines: all the raw data in list
         '''
-        raise Exception('The method _make_examples_for_train is not impletmented!')
+        raise Exception('The method _make_training_examples is not impletmented!')
     #
     def _raw_data_check(self, filename, lines):
         # This method's resposibilities are to make sure that number of lines is enough
@@ -305,28 +320,29 @@ class InputData():
                 except ValueError:
                     _is_comptible = False
                     #log
-                    self._log_data_not_comptible(filename,
+                    self.__log_data_not_comptible__(filename,
                                                  rnn_model_exception.DataNotComptible.has_non_float)
                     return _is_comptible
         length = len(lines)
         if length < self.__max_step__:
             _is_comptible = False
             #log
-            self._log_data_not_comptible(filename,
+            self.__log_data_not_comptible__(filename,
                                          rnn_model_exception.DataNotComptible.is_not_enough)
         return _is_comptible
     #
-    def _log_data_not_comptible(self, filename, error_type):
+    def __log_data_not_comptible__(self, filename, error_type):
         def __createlogerrorfile__(path):
             with self.__fsys_data__.open(path, mode='w') as logerror:
                 writer = csv.writer(logerror)
                 writer.writerow(['filename', 'errorlog'])
         path = self.__default_result_data_dir__ + self.__default_log_file__
         if self.__fsys_data__.exists(path) is not True:
-            __createlogerrorfile__(path)        
+            __createlogerrorfile__(path)
         with self.__fsys_data__.open(path, mode='a') as logfile:
             writer = csv.writer(logfile)
             writer.writerow([filename, error_type])
+    #
 
 # main control
 def main(args):
