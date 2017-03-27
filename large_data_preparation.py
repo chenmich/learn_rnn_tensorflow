@@ -203,16 +203,24 @@ class InputData():
         At least, this class must convert the csv format to tfrecord format
     '''
     def __init__(self, fsys_data, max_step, feature_size, raw_file_wildcard=None):
-        self.__fsys_data__ = fsys_data
+        #model parameter
         self.__max_step__ = max_step
         self.__feature_size__ = feature_size
+        #file system
         self.__default_raw_data_dir__ = 'raw_data/'
         self.__default_result_data_dir__ = 'result_data/' + 'dataset' + str(max_step) + '/'
         self.__default_log_file__ = 'logerror.txt'
-        self.__default_prediction_tfrecord__ = 'prediction.tfrecord'
-        self.__default_valid_tfrecord__ = 'valid.tfrecord'
-        self.__default_test_tfrecord__ = 'test.tfrecord'
-        self.__default_train_tfrecord__ = 'train.tfrecord'
+        self.__fsys_data__ = fsys_data
+        #tfrecord file
+        self.__default_prediction_tfrecordfile__ = 'prediction.tfrecord'
+        self.__default_valid_tfrecordfile__ = 'valid.tfrecord'
+        self.__default_test_tfrecordfile__ = 'test.tfrecord'
+        self.__default_train_tfrecordfile__ = 'train.tfrecord'
+        #tf.sequenceExample
+        self.__default_tfexample_input_sequence = 'input_sequence'
+        self.__default_tfexample_target_sequence = 'target_sequence'
+        self.__default_tfcontext_token = 'token'
+        self.__default_tfcontext_sequent_length = 'length'
         if raw_file_wildcard is None:
             self.__raw_file_wildcard__ = '*.csv'
         else:
