@@ -14,12 +14,13 @@
 # ==============================================================================
 '''This is exception class for my model
 '''
-import sys
+class DataNotComptible():
+    has_non_float = 1
+    is_not_enough = 2
+#
 class RNNModelException(Exception):
     ''' RNN model's root Exception
     '''
-
-    ''' This class define the exception for data whihc can not be convert to number
-    '''
     pass
+
 

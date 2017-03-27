@@ -14,10 +14,11 @@
 # ==============================================================================
 ''' This module make examples from sequence data
 '''
-from datetime import datetime
-import json
-import csv
 import argparse
+import csv
+import json
+from datetime import datetime
+
 import numpy as np
 from fs.osfs import OSFS
 import rnn_model_exception
@@ -206,12 +207,15 @@ class InputData():
         self.__max_step__ = max_step
         self.__feature_size__ = feature_size
         self.__default_raw_data_dir__ = 'raw_data/'
-        self.__default_result_data_dir__ = 'result_data/' + str(max_step)
-        self.__default_log_file__ = 'log.txt'
+        self.__default_result_data_dir__ = 'result_data/' + 'dataset' + str(max_step) + '/'
+        self.__default_log_file__ = 'logerror.txt'
         if raw_file_wildcard is None:
             self.__raw_file_wildcard__ = '*.csv'
         else:
             self.__raw_file_wildcard__ = raw_file_wildcard
+        if self.__fsys_data__.exists(self.__default_result_data_dir__) is not True:
+            self.__fsys_data__.makedir(self.__default_result_data_dir__)
+
     #
     def make_examples(self):
         ''' This method will divided raw to four parts
@@ -222,11 +226,13 @@ class InputData():
         '''
         #The examples for prediction will save to file of json file format
         files = self._get_raw_data_files()
+        if len(files) == 0: return
         prediction_examples = {}
         _lines = []
         for raw_file in files:
-            #if comptible, _lines will be converted to float after _raw_data_check is called
-            if self._raw_data_check(raw_file):
+            # if comptible, data converted to float will be stored in _lines
+            # after _raw_data_check is called
+            if self._raw_data_check(raw_file, _lines):
                 self._make_examples_for_prediction(_lines[0:self.__max_step__],
                                                    raw_file.split()[0])
                 self._make_examples_for_train(_lines[self.__max_step__:],
@@ -275,18 +281,53 @@ class InputData():
         '''
         raise Exception('The method _make_examples_for_train is not impletmented!')
     #
-    def _raw_data_check(self, filename):
-        # This method's responsibility must be carefully analysis
-        # This will affect the _make_examples method' design
+    def _raw_data_check(self, filename, lines):
         # This method's resposibilities are to make sure that number of lines is enough
-        # and that the string can be converted to number
+        # and that the needed string can be converted to number
         # If it is not comptible, this method log it
         ''' process the problem that the lines of one file are less max_step!
             process the porble that some data of price and volumn can be converted float
             args:
                 lines: lines of data. It is a list
         '''
-        raise Exception("The method _raw_data_check is not impletmented!")
+        _is_comptible = True
+        with self.__fsys_data__.open(self.__default_raw_data_dir__ + filename,
+                                     mode='r') as raw_file:
+
+            reader = csv.reader(raw_file)
+            next(reader)
+            for line in reader:
+                try:
+                    tmp = line[0]
+                    line_data = line[1:]
+                    tmp_data = [float(x) for x in line_data]
+                    lines.append([tmp] + tmp_data)
+                except ValueError:
+                    _is_comptible = False
+                    #log
+                    self._log_data_not_comptible(filename,
+                                                 rnn_model_exception.DataNotComptible.has_non_float)
+                    return _is_comptible
+        length = len(lines)
+        if length < self.__max_step__:
+            _is_comptible = False
+            #log
+            self._log_data_not_comptible(filename,
+                                         rnn_model_exception.DataNotComptible.is_not_enough)
+        return _is_comptible
+    #
+    def _log_data_not_comptible(self, filename, error_type):
+        def __createlogerrorfile__(path):
+            with self.__fsys_data__.open(path, mode='w') as logerror:
+                writer = csv.writer(logerror)
+                writer.writerow(['filename', 'errorlog'])
+        path = self.__default_result_data_dir__ + self.__default_log_file__
+        if self.__fsys_data__.exists(path) is not True:
+            __createlogerrorfile__(path)        
+        with self.__fsys_data__.open(path, mode='a') as logfile:
+            writer = csv.writer(logfile)
+            writer.writerow([filename, error_type])
+
 # main control
 def main(args):
     ''' main control flow
