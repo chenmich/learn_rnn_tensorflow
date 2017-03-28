@@ -20,7 +20,9 @@ import json
 from datetime import datetime
 
 import numpy as np
+import tensorflow as tf
 from fs.osfs import OSFS
+
 import rnn_model_exception
 
 MODEL_DATA_FS = None
@@ -217,10 +219,10 @@ class InputData():
         self.__default_test_tfrecordfile__ = 'test.tfrecord'
         self.__default_train_tfrecordfile__ = 'train.tfrecord'
         #tf.sequenceExample
-        self.__default_tfexample_input_sequence = 'input_sequence'
-        self.__default_tfexample_target_sequence = 'target_sequence'
-        self.__default_tfcontext_token = 'token'
-        self.__default_tfcontext_sequent_length = 'length'
+        self.__default_tfexample_input_sequence__ = 'input_sequence'
+        self.__default_tfexample_target_sequence__ = 'target_sequence'
+        self.__default_tfcontext_token__ = 'token'
+        self.__default_tfcontext_sequent_length__ = 'length'
         if raw_file_wildcard is None:
             self.__raw_file_wildcard__ = '*.csv'
         else:
@@ -268,12 +270,20 @@ class InputData():
                 file_name: file name with extension of a raw file
                            the file name is key dictionary for examples for prediction
         '''
-        ex = self.__make_tf_sequence_exameple__(token, lines)
+        length = self.__max_step__
+        _token = bytes(token, 'utf-8')
+        _sequence = np.array(lines)
+        _sequence = _sequence[:, 1:]
+        _sequence = _sequence.flatten().tolist()
+        ex = tf.train.SequenceExample()
+        ex.context.feature[self.__default_tfcontext_sequent_length__].int64_list.value.append(length)
+        ex.context.feature[self.__default_tfcontext_token__].bytes_list.value.append(_token)
+        input_feature = ex.feature_lists.feature_list[self.__default_tfexample_input_sequence__]
+        for x in _sequence:
+            input_feature.feature.add().float_list.value.append(x)
 
-        raise Exception('the Method _make_examples_for_prediction is not impletmneted!')
-    #
-    def __make_tf_sequence_exameple__(self, token, input_sequence, target_sequence=None):
-        raise Exception("The method __make_tf_sequence_exameple__ is not impletmented!")
+        self._save_example_for_prediction(ex)
+
     #
     def _svae_example_for_prediction(self, ex):
         ''' This method will save example for prediction to a tfrecord file
@@ -351,6 +361,8 @@ class InputData():
             writer = csv.writer(logfile)
             writer.writerow([filename, error_type])
     #
+    def _save_example_for_prediction(self, ex):
+        pass
 
 # main control
 def main(args):

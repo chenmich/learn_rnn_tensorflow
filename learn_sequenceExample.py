@@ -13,6 +13,7 @@ def make_example(sequence, labels):
     # A non-sequential feature of our example
     sequence_length = len(sequence)
     ex.context.feature["length"].int64_list.value.append(sequence_length)
+    ex.context.feature["token_name"].bytes_list.value.append(b'MSF')
     # Feature lists for the two sequential features of our example
     fl_tokens = ex.feature_lists.feature_list["tokens"]
     fl_labels = ex.feature_lists.feature_list["labels"]
@@ -26,7 +27,7 @@ def make_example(sequence, labels):
 with tempfile.NamedTemporaryFile() as fp:
     writer = tf.python_io.TFRecordWriter(fp.name)
     for sequence, label_sequence in zip(sequences, label_sequences):
-        ex = make_example(sequence, label_sequence) 
+        ex = make_example(sequence, label_sequence)
         writer.write(ex.SerializeToString())
     writer.close()
     print("Wrote to {}".format(fp.name))
@@ -41,7 +42,8 @@ ex = make_example([1, 2, 3], [0, 1, 0]).SerializeToString()
 
 # Define how to parse the example
 context_features = {
-    "length": tf.FixedLenFeature([], dtype=tf.int64)
+    "length": tf.FixedLenFeature([], dtype=tf.int64),
+    "token_name": tf.FixedLenFeature([], dtype=tf.string)
 }
 sequence_features = {
     "tokens": tf.FixedLenSequenceFeature([], dtype=tf.int64),

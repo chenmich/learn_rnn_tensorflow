@@ -190,55 +190,60 @@ class test_make_examples_for_prediction(tf.test.TestCase):
     def tearDown(self):
         self.fsys.close()
     def test_make_single_example(self):
-        ''' test the method _make_examples_for_prediction 
+        ''' test the method _make_examples_for_prediction
             of InputData creates tf.train.SequenceExample
         '''
+        #preparation
         class InputData_MakeSingleExample(ldp.InputData):
             ''' from _save_example_for_prediction check the indirect output
                 of _make_examples_for_prediction
                 so the method _save_example_for_prediction will be overridden as check point
             '''
-            self.__context_parsed = None
-            self.__sequence_parsed = None
+            self.__context_parsed__ = None
+            self.__sequence_parsed__ = None
             def _save_example_for_prediction(self, ex):
                 ''' parser the ex to valid if it is created correctly
                 '''
-                ex_serial = ex.serialized()
-                context_features = {self.__default_tfcontext_token:
-                                        tf.FixedLenFeature([], dtype=tf.int64),
-                                    self.__default_tfcontext_sequent_length:
+                ex_serial = ex.SerializeToString()
+                context_features = {self.__default_tfcontext_token__:
+                                        tf.FixedLenFeature([], dtype=tf.string),
+                                    self.__default_tfcontext_sequent_length__:
                                         tf.FixedLenFeature([], dtype=tf.int64)
                                    }
-                sequence_features = {self.__default_tfexample_input_sequence:
-                                     tf.FixedLenSequenceFeature([], dtype=tf.int64),
-                                     self.__default_tfexample_target_sequence:
-                                     tf.FixedLenSequenceFeature([], dtype=tf.int64)
+                sequence_features = {self.__default_tfexample_input_sequence__:
+                                     tf.FixedLenSequenceFeature([], dtype=tf.float32)
                                     }
                 context_parsed, sequence_parsed = tf.parse_single_sequence_example(
                     serialized=ex_serial,
                     context_features=context_features,
                     sequence_features=sequence_features
                     )
-                self.__context_parsed = context_parsed
-                self.__sequence_parsed = sequence_parsed
-
+                self.__context_parsed__ = context_parsed
+                self.__sequence_parsed__ = sequence_parsed
 
         #
-        _lines_array = np.arange(MAX_STEP*FEATURE_SIZE)
+        _lines_array = np.random.normal(size=MAX_STEP*FEATURE_SIZE)
         _lines = _lines_array.reshape(MAX_STEP, FEATURE_SIZE).tolist()
         lines = [[datetime.datetime.now()] + _line for _line in _lines]
         initdata = InputData_MakeSingleExample(self.fsys, MAX_STEP, FEATURE_SIZE)
+        #exercise
         initdata._make_examples_for_prediction(lines, 'some00000')
+        #valid
+        context_token = initdata.__default_tfcontext_token__
+        context_length = initdata.__default_tfcontext_sequent_length__
+        input_sequence = initdata.__default_tfexample_input_sequence__
+        context_parsed = initdata.__context_parsed__
+        sequence_parsed = initdata.__sequence_parsed__
         with tf.Session() as sess:
             self.assertEqual(
-                sess.run(initdata.__context_parsed[initdata.__default_tfcontext_token]),
-                'some00000')
+                sess.run(context_parsed[context_token]),
+                b'some00000')
             self.assertEqual(
-                sess.run(initdata.__context_parsed[initdata.__default_tfcontext_sequent_length]),
+                sess.run(context_parsed[context_length]),
                 MAX_STEP)
             self.assertEquals(
-                sess.run(initdata.__sequence_parsed[initdata.__default_tfexample_input_sequence]),
-                _lines_array)
+                sess.run(sequence_parsed[input_sequence]),
+                np.array(lines))
 
 #
 
