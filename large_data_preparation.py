@@ -276,11 +276,14 @@ class InputData():
         _sequence = _sequence[:, 1:]
         _sequence = _sequence.flatten().tolist()
         ex = tf.train.SequenceExample()
-        ex.context.feature[self.__default_tfcontext_sequent_length__].int64_list.value.append(length)
-        ex.context.feature[self.__default_tfcontext_token__].bytes_list.value.append(_token)
-        input_feature = ex.feature_lists.feature_list[self.__default_tfexample_input_sequence__]
+        context_sequent_length = self.__default_tfcontext_sequent_length__
+        context_token = self.__default_tfcontext_token__
+        input_sequence = self.__default_tfexample_input_sequence__
+        ex.context.feature[context_sequent_length].int64_list.value.append(length)
+        ex.context.feature[context_token].bytes_list.value.append(_token)
+        input_feature = ex.feature_lists.feature_list[input_sequence]
         for x in _sequence:
-            input_feature.feature.add().float_list.value.append(x)
+            input_feature.feature.add().float_list.value.append(float(x))
 
         self._save_example_for_prediction(ex)
 

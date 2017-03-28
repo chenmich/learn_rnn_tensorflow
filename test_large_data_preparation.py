@@ -224,7 +224,7 @@ class test_make_examples_for_prediction(tf.test.TestCase):
         #
         _lines_array = np.random.normal(size=MAX_STEP*FEATURE_SIZE)
         _lines = _lines_array.reshape(MAX_STEP, FEATURE_SIZE).tolist()
-        lines = [[datetime.datetime.now()] + _line for _line in _lines]
+        lines = [[str(datetime.datetime.now())] + _line for _line in _lines]
         initdata = InputData_MakeSingleExample(self.fsys, MAX_STEP, FEATURE_SIZE)
         #exercise
         initdata._make_examples_for_prediction(lines, 'some00000')
@@ -241,9 +241,8 @@ class test_make_examples_for_prediction(tf.test.TestCase):
             self.assertEqual(
                 sess.run(context_parsed[context_length]),
                 MAX_STEP)
-            self.assertEquals(
-                sess.run(sequence_parsed[input_sequence]),
-                np.array(lines))
+            real = sess.run(sequence_parsed[input_sequence])
+            self.assertAllClose(real, _lines_array)
 
 #
 
