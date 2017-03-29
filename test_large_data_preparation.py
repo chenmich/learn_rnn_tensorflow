@@ -54,7 +54,7 @@ FILE_WILDCARD = '*.csv'
 NUM_RAW_FILES = 5
 #
 #test InputData class
-class test_get_raw_data_files(tf.test.TestCase):
+class test_get_files(tf.test.TestCase):
     ''' test the method of InputData' method _get_raw_data_files
     '''
     def test_returned_value(self):
@@ -62,7 +62,9 @@ class test_get_raw_data_files(tf.test.TestCase):
         '''
         fsys = get_fsys()
         inputdata = ldp.InputData(fsys, MAX_STEP, FEATURE_SIZE)
-        files = inputdata._get_raw_data_files()
+        pure_path = inputdata.__default_raw_data_dir__
+        match = inputdata.__raw_file_wildcard__
+        files = inputdata._get_files(pure_path, match)
         self.assertEqual(len(files), NUM_RAW_FILES)
         self.assertEqual(files[0], 'some00000.csv')
         self.assertEqual(files[1], 'some00001.csv')
@@ -136,7 +138,8 @@ class test_raw_data_check(tf.test.TestCase):
         lines = []
         self.assertFalse(inputdata._raw_data_check('some00005.csv', []))
         # valid the problem not to be comptible logged correctly
-        path = inputdata.__default_result_data_dir__ + inputdata.__default_log_file__
+        log_path = inputdata.__default_result_data_dir__ + inputdata.__default_log_file__
+        '''
         logcontent = []
         with self.fsys.open(path, mode='r') as logerror:
             reader = csv.reader(logerror)
@@ -144,6 +147,10 @@ class test_raw_data_check(tf.test.TestCase):
             logcontent = next(reader)
         self.assertEqual(logcontent[0], 'some00005.csv')
         self.assertEqual(int(logcontent[1]), rnn_model_exception.DataNotComptible.is_not_enough)
+        '''
+        #try refactor
+        logcontent = ['some00005.csv', rnn_model_exception.DataNotComptible.is_not_enough]
+        self.__raw_not_comptible_log_assertion(log_path, logcontent)
     #
     def test_raw_data_check_has_non_number(self):
         lines = np.arange(MAX_STEP * FEATURE_SIZE).reshape(MAX_STEP, FEATURE_SIZE).tolist()
@@ -159,30 +166,22 @@ class test_raw_data_check(tf.test.TestCase):
         lines = []
         self.assertFalse(inputdata._raw_data_check('some00005.csv', lines))
         # valid the problem not to be comptible logged correctly
-        path = inputdata.__default_result_data_dir__ + inputdata.__default_log_file__
-        logcontent = []
-        with self.fsys.open(path, mode='r') as logerror:
+        log_path = inputdata.__default_result_data_dir__ + inputdata.__default_log_file__
+        logcontent = ['some00005.csv', rnn_model_exception.DataNotComptible.has_non_float]
+        self.__raw_not_comptible_log_assertion(log_path, logcontent)
+    def __raw_not_comptible_log_assertion(self, log_path, logcontent):
+        with self.fsys.open(log_path, mode='r') as logerror:
             reader = csv.reader(logerror)
             next(reader)
-            logcontent = next(reader)
-        self.assertEqual(logcontent[0], 'some00005.csv')
-        self.assertEqual(int(logcontent[1]), rnn_model_exception.DataNotComptible.has_non_float)
-    #
+            _logcontent = next(reader)
+        self.assertEqual(_logcontent[0], logcontent[0])
+        self.assertEqual(int(_logcontent[1]), logcontent[1])
     def test_raw_data_check_result(self):
         _lines = []
         inputdata = ldp.InputData(self.fsys, MAX_STEP, FEATURE_SIZE)
         inputdata._raw_data_check("some00001.csv", _lines)
         self.assertGreater(len(_lines), 0)
-    '''def __raw_data_log_assert_method(self, filename, error_type):
-        with self.fsys.open('result_data/result_data/dataset' +
-                            str(MAX_STEP) + '/logerror.txt', mode='r') as logfile:
-            reader = csv.reader(logfile)
-            next(reader)
-            logcontent = next(reader)
-            filename = logcontent[0]
-            error_type = int(logcontent[1])
-        self.assertEqual(filename, 'some00005.csv')
-        self.assertEqual(error_type, rnn_model_exception.DataNotComptible.has_non_float)'''
+    
 #
 class test_make_examples_for_prediction(tf.test.TestCase):
     def setUp(self):
@@ -224,7 +223,7 @@ class test_make_examples_for_prediction(tf.test.TestCase):
         #
         _lines_array = np.random.normal(size=MAX_STEP*FEATURE_SIZE)
         _lines = _lines_array.reshape(MAX_STEP, FEATURE_SIZE).tolist()
-        lines = [[datetime.datetime.now()] + _line for _line in _lines]
+        lines = [[(datetime.datetime.now())] + _line for _line in _lines]
         initdata = InputData_MakeSingleExample(self.fsys, MAX_STEP, FEATURE_SIZE)
         #exercise
         initdata._make_examples_for_prediction(lines, 'some00000')
@@ -241,11 +240,9 @@ class test_make_examples_for_prediction(tf.test.TestCase):
             self.assertEqual(
                 sess.run(context_parsed[context_length]),
                 MAX_STEP)
-            self.assertEquals(
-                sess.run(sequence_parsed[input_sequence]),
-                np.array(lines))
+            real = sess.run(sequence_parsed[input_sequence])
+            self.assertAllClose(real, _lines_array)
 
 #
-
 if __name__ == "__main__":
     tf.test.main()

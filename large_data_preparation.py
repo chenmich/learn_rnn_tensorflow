@@ -213,16 +213,18 @@ class InputData():
         self.__default_result_data_dir__ = 'result_data/' + 'dataset' + str(max_step) + '/'
         self.__default_log_file__ = 'logerror.txt'
         self.__fsys_data__ = fsys_data
-        #tfrecord file
-        self.__default_prediction_tfrecordfile__ = 'prediction.tfrecord'
-        self.__default_valid_tfrecordfile__ = 'valid.tfrecord'
-        self.__default_test_tfrecordfile__ = 'test.tfrecord'
-        self.__default_train_tfrecordfile__ = 'train.tfrecord'
         #tf.sequenceExample
         self.__default_tfexample_input_sequence__ = 'input_sequence'
         self.__default_tfexample_target_sequence__ = 'target_sequence'
         self.__default_tfcontext_token__ = 'token'
         self.__default_tfcontext_sequent_length__ = 'length'
+        #file match symobles
+        #tfrecord file
+        self.__default_prediction_tfrecordfile__ = 'prediction*.tfrecord'
+        self.__default_valid_tfrecordfile__ = 'valid*.tfrecord'
+        self.__default_test_tfrecordfile__ = 'test*.tfrecord'
+        self.__default_train_tfrecordfile__ = 'train*.tfrecord'
+        #raw data
         if raw_file_wildcard is None:
             self.__raw_file_wildcard__ = '*.csv'
         else:
@@ -240,7 +242,7 @@ class InputData():
             And The first three parts are unified as training data
         '''
         #The examples for prediction will save to file of json file format
-        files = self._get_raw_data_files()
+        files = self._get_files(self.__default_raw_data_dir__, self.__raw_file_wildcard__)
         if len(files) == 0: return
         #randomly shuffle the order of files
         files_array = np.array(files)
@@ -257,7 +259,7 @@ class InputData():
                 self._make_examples_for_prediction(_lines[0:self.__max_step__],
                                                    token)
                 self._make_training_examples(_lines[self.__max_step__:],
-                                              token)
+                                             token)
 
     #
     def _make_examples_for_prediction(self, lines, token):
@@ -276,29 +278,33 @@ class InputData():
         _sequence = _sequence[:, 1:]
         _sequence = _sequence.flatten().tolist()
         ex = tf.train.SequenceExample()
-        ex.context.feature[self.__default_tfcontext_sequent_length__].int64_list.value.append(length)
-        ex.context.feature[self.__default_tfcontext_token__].bytes_list.value.append(_token)
-        input_feature = ex.feature_lists.feature_list[self.__default_tfexample_input_sequence__]
+        context_sequent_length = self.__default_tfcontext_sequent_length__
+        context_token = self.__default_tfcontext_token__
+        input_sequence = self.__default_tfexample_input_sequence__
+        ex.context.feature[context_sequent_length].int64_list.value.append(length)
+        ex.context.feature[context_token].bytes_list.value.append(_token)
+        input_feature = ex.feature_lists.feature_list[input_sequence]
         for x in _sequence:
             input_feature.feature.add().float_list.value.append(x)
-
         self._save_example_for_prediction(ex)
 
     #
-    def _svae_example_for_prediction(self, ex):
+    def _save_example_for_prediction(self, ex):
         ''' This method will save example for prediction to a tfrecord file
             args:
-            ex: an instance of class tf.train.SequenceExample
-        '''
-
+            ex: an instance of class tf.train.SequenceExample        '''
+        pure_path = self.__default_result_data_dir__
+    
         raise Exception('The method _svae_example_for_prediction is not impletemented!')
     #
-    def _get_raw_data_files(self):
+    
+    #
+    def _get_files(self, pure_path, match):
         ''' This method get all the files in specified raw data dir
         '''
         _filelist = list(self.__fsys_data__.filterdir(
-            self.__default_raw_data_dir__,
-            files=[self.__raw_file_wildcard__])
+            pure_path,
+            files=[match])
                         )
         filelist = [x.name for x in _filelist]
         return filelist
@@ -361,8 +367,6 @@ class InputData():
             writer = csv.writer(logfile)
             writer.writerow([filename, error_type])
     #
-    def _save_example_for_prediction(self, ex):
-        pass
 
 # main control
 def main(args):
