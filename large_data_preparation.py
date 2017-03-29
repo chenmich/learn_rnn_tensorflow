@@ -283,7 +283,7 @@ class InputData():
         ex.context.feature[context_token].bytes_list.value.append(_token)
         input_feature = ex.feature_lists.feature_list[input_sequence]
         for x in _sequence:
-            input_feature.feature.add().float_list.value.append(float(x))
+            input_feature.feature.add().float_list.value.append(x)
 
         self._save_example_for_prediction(ex)
 
