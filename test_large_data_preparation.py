@@ -54,7 +54,7 @@ FILE_WILDCARD = '*.csv'
 NUM_RAW_FILES = 5
 #
 #test InputData class
-class test_get_raw_data_files(tf.test.TestCase):
+class test_get_files(tf.test.TestCase):
     ''' test the method of InputData' method _get_raw_data_files
     '''
     def test_returned_value(self):
@@ -62,7 +62,9 @@ class test_get_raw_data_files(tf.test.TestCase):
         '''
         fsys = get_fsys()
         inputdata = ldp.InputData(fsys, MAX_STEP, FEATURE_SIZE)
-        files = inputdata._get_raw_data_files()
+        pure_path = inputdata.__default_raw_data_dir__
+        match = inputdata.__raw_file_wildcard__
+        files = inputdata._get_files(pure_path, match)
         self.assertEqual(len(files), NUM_RAW_FILES)
         self.assertEqual(files[0], 'some00000.csv')
         self.assertEqual(files[1], 'some00001.csv')
@@ -242,6 +244,5 @@ class test_make_examples_for_prediction(tf.test.TestCase):
             self.assertAllClose(real, _lines_array)
 
 #
-
 if __name__ == "__main__":
     tf.test.main()
