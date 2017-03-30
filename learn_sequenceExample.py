@@ -3,6 +3,7 @@
 import tensorflow as tf
 import numpy as np
 import tempfile
+import fs
 
 sequences = [[1, 2, 3], [4, 5, 1], [1, 2]]
 label_sequences = [[0, 1, 0], [1, 0, 0], [1, 1]]
@@ -23,8 +24,10 @@ def make_example(sequence, labels):
         fl_labels.feature.add().int64_list.value.append(label)
     return ex
 
+
 # Write all examples into a TFRecords file
-with tempfile.NamedTemporaryFile() as fp:
+fsys = fs.open_fs('data')
+with fsys.open('result_data/prediction.tfrecord', mode='a') as fp:
     writer = tf.python_io.TFRecordWriter(fp.name)
     for sequence, label_sequence in zip(sequences, label_sequences):
         ex = make_example(sequence, label_sequence)

@@ -181,7 +181,7 @@ class test_raw_data_check(tf.test.TestCase):
         inputdata = ldp.InputData(self.fsys, MAX_STEP, FEATURE_SIZE)
         inputdata._raw_data_check("some00001.csv", _lines)
         self.assertGreater(len(_lines), 0)
-    
+
 #
 class test_make_examples_for_prediction(tf.test.TestCase):
     def setUp(self):
