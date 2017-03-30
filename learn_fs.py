@@ -88,6 +88,7 @@ _other_fsys = model_data_fs.opendir('data/result_data/')
 print("another")
 _other_fsys.tree()
 
+<<<<<<< HEAD
 
 
 
@@ -100,4 +101,13 @@ with some_fsys.open('some.csv', mode='w') as sf:
         writer.writerow(_line)
 info = some_fsys.getinfo('some.csv')
 print(info)
+=======
+fsys = MemoryFS()
+with fsys.open("some.csv", mode='w') as fp:
+    writer = csv.writer(fp)
+    for line in _raw_data:
+        writer.writerow(line)
+    print(fp.name)
+info = fsys.getdetails('some.csv')
+>>>>>>> b833dcda17833dc575c5f4c8b40dae0af5cf4717
 print(info.size)
