@@ -208,7 +208,8 @@ class InputData():
         #model parameter
         self.__max_step__ = max_step
         self.__feature_size__ = feature_size
-        self.__size_result_file = 30*1024*1024
+        self.__size_result_file__ = 30*1024*1024
+        self.__bytes_of_file_number__ = 5
         #file system
         self.__default_raw_data_dir__ = 'raw_data/'
         self.__default_result_data_dir__ = 'result_data/' + 'dataset' + str(max_step) + '/'
@@ -293,33 +294,55 @@ class InputData():
     def _save_example_for_prediction(self, ex):
         ''' This method will save example for prediction to a tfrecord file
             args:
-                ex: an instance of class tf.train.SequenceExample 
+                ex: an instance of class tf.train.SequenceExample
         '''
         pure_path = self.__default_result_data_dir__
-        fp = self.__get_result_data_file_object()
+        fp = self.__get_result_data_file_object(self.__default_prediction_tfrecordfile__)
         writer = tf.python_io.TFRecordWriter(fp.name)
         writer.write(ex.SerializeToString())
         writer.close()
         fp.close()
     #
     def __get_result_data_file_object(self, match):
-        def __create_filename(self, match):
-            _filenames = match.split('.')
-            filename_ = _filenames[0][0:-1]
         pure_path = self.__default_result_data_dir__
         files = self._get_files(pure_path, match)
+        filename = None
+        if len(files) >= 0:
+            for _file in files:
+                if self.__fsys_data__.getdetails(_file).size < self.__size_result_file__:
+                    filename = _file
+                    break
+        if filename == None: filename = self.__create_filename__(files)
+        fp = self.__fsys_data__.open(pure_path + filename, mode='a')
+        return fp
 
-
-
+    def __create_filename__(self, files):
+        ''' The form of name of result data are "prediction000.tfrecord"
+            The number in name of file is the "000"
+            When the size is large enough, the result data will be stored in another file
+            And the name of new file will be the "prediction001.tfrecord"
+            The method will search the in the list of files, and find the greatest number
+            Then will create an new file which number will be plus 1 to the greatest number
+        '''
+        _file = files[len(files) - 1]
+        _filename = _file.split('.')
+        file_base = _filename[0][0:-self.__bytes_of_file_number__]
+        file_suffix = _filename[1]
+        file_number = int(_filename[0][-self.__bytes_of_file_number__:])
+        file_number += 1
+        string_number = None
+        if file_number >= 100: string_number = str(file_number)
+        if file_number < 100 and  file_number >= 10: string_number = '0' + str(file_number)
+        if file_number < 10: string_number = '00' +str(file_number)
+        filename = file_base + string_number + '.' + file_suffix
+        return filename
     #
     def _get_files(self, pure_path, match):
         ''' This method get all the files in specified raw data dir
         '''
-        _filelist = list(self.__fsys_data__.filterdir(
-            pure_path,
-            files=[match])
-                        )
-        filelist = [x.name for x in _filelist]
+        _filelist = list(self.__fsys_data__.filterdir(pure_path, 
+                                                      files=[match]))
+        filelist = [x.name for x in _filelist]        
         return filelist
     #
     def _make_training_examples(self, lines, token):
