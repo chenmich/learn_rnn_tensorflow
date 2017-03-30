@@ -223,7 +223,7 @@ class test_make_examples_for_prediction(tf.test.TestCase):
         #
         _lines_array = np.random.normal(size=MAX_STEP*FEATURE_SIZE)
         _lines = _lines_array.reshape(MAX_STEP, FEATURE_SIZE).tolist()
-        lines = [[(datetime.datetime.now())] + _line for _line in _lines]
+        lines = [[datetime.datetime.now()] + _line for _line in _lines]
         initdata = InputData_MakeSingleExample(self.fsys, MAX_STEP, FEATURE_SIZE)
         #exercise
         initdata._make_examples_for_prediction(lines, 'some00000')
@@ -242,7 +242,16 @@ class test_make_examples_for_prediction(tf.test.TestCase):
                 MAX_STEP)
             real = sess.run(sequence_parsed[input_sequence])
             self.assertAllClose(real, _lines_array)
-
+    def test_save_example_for_prediction(self):
+        _lines_array = np.random.normal(size=MAX_STEP*FEATURE_SIZE)
+        _lines = _lines_array.reshape(MAX_STEP, FEATURE_SIZE).tolist()
+        lines = [[datetime.datetime.now()] + _line for _line in _lines]
+        initdata = ldp.InputData(self.fsys, MAX_STEP, FEATURE_SIZE)
+        #exercise
+        initdata._make_examples_for_prediction(lines, 'some00000')
+        path = initdata.__fsys_data__ + initdata.__default_prediction_tfrecordfile__
+        info = initdata.__fsys_data__.getdetails(path)
+        self.assertGreater(info.size, 0)
 #
 if __name__ == "__main__":
     tf.test.main()

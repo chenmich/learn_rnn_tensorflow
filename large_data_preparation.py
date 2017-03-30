@@ -208,6 +208,7 @@ class InputData():
         #model parameter
         self.__max_step__ = max_step
         self.__feature_size__ = feature_size
+        self.__size_result_file = 30*1024*1024
         #file system
         self.__default_raw_data_dir__ = 'raw_data/'
         self.__default_result_data_dir__ = 'result_data/' + 'dataset' + str(max_step) + '/'
@@ -292,12 +293,23 @@ class InputData():
     def _save_example_for_prediction(self, ex):
         ''' This method will save example for prediction to a tfrecord file
             args:
-            ex: an instance of class tf.train.SequenceExample        '''
-        pure_path = self.__default_result_data_dir__
-    
-        raise Exception('The method _svae_example_for_prediction is not impletemented!')
+                ex: an instance of class tf.train.SequenceExample
+        '''
+        fp = self.__get_result_data_file_object()
+        writer = tf.python_io.TFRecordWriter(fp.name)
+        writer.write(ex.SerializeToString())
+        writer.close()
+        fp.close()
     #
-    
+    def __get_result_data_file_object(self, match):
+        def __create_filename(self, match):
+            _filenames = match.split('.')
+            filename_ = _filenames[0][0:-1]
+        pure_path = self.__default_result_data_dir__
+        files = self._get_files(pure_path, match)
+
+
+
     #
     def _get_files(self, pure_path, match):
         ''' This method get all the files in specified raw data dir
