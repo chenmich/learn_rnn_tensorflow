@@ -294,7 +294,7 @@ class InputData():
             args:
             ex: an instance of class tf.train.SequenceExample        '''
         pure_path = self.__default_result_data_dir__
-    
+        
         raise Exception('The method _svae_example_for_prediction is not impletemented!')
     #
     

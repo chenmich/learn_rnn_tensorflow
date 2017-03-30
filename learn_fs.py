@@ -84,6 +84,20 @@ for _file in filenames:
 print("___________________________________________")
 print('____________________________________________')
 model_data_fs.tree()
-_other_fsys = model_data_fs.opendir('data/result_data')
+_other_fsys = model_data_fs.opendir('data/result_data/')
 print("another")
 _other_fsys.tree()
+
+
+
+
+# get information
+some_fsys = MemoryFS()
+
+with some_fsys.open('some.csv', mode='w') as sf:
+    writer = csv.writer(sf)
+    for _line in examples:
+        writer.writerow(_line)
+info = some_fsys.getinfo('some.csv')
+print(info)
+print(info.size)
