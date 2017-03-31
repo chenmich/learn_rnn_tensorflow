@@ -81,7 +81,6 @@ class test_setup_result_dir(tf.test.TestCase):
         inputdata.__setup_result_dir__()
         fsys = inputdata.__fsys_data__
         pure_path = inputdata.__default_result_data_dir__
-        files = inputdata._get_files(pure_path, '*.*')
         self.assertTrue(fsys.exists(pure_path))
         self.assertTrue(fsys.exists(pure_path + 'logerror.txt'))
         self.assertTrue(fsys.exists(pure_path + 'test' +
