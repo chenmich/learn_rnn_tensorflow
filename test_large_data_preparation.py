@@ -84,7 +84,7 @@ class test_setup_result_dir(tf.test.TestCase):
         files = inputdata._get_files(pure_path, '*.*')
         self.assertTrue(fsys.exists(pure_path))
         self.assertTrue(fsys.exists(pure_path + 'logerror.txt'))
-        self.assertTrue(fsys.exists(pure_path + 'test' + 
+        self.assertTrue(fsys.exists(pure_path + 'test' +
                                     inputdata.__bits_of_file_number__*'0' + '.tfrecord'))
         self.assertTrue(fsys.exists(pure_path + 'prediction' +
                                     inputdata.__bits_of_file_number__*'0' + '.tfrecord'))
@@ -92,6 +92,11 @@ class test_setup_result_dir(tf.test.TestCase):
                                     inputdata.__bits_of_file_number__*'0' + '.tfrecord'))
         self.assertTrue(fsys.exists(pure_path + 'valid' +
                                     inputdata.__bits_of_file_number__*'0' + '.tfrecord'))
+        with fsys.open(pure_path + 'logerror.txt', mode='r') as logerror:
+            reader = csv.reader(logerror)
+            line = next(reader)
+            self.assertEqual(line[0], 'file_name')
+            self.assertEqual(line[1], 'error_type')
 
 #
 class test_make_example(tf.test.TestCase):
