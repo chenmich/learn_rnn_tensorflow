@@ -14,13 +14,13 @@
 # ==============================================================================
 '''This is exception class for my model
 '''
-class DataNotComptible():
-    has_non_float = 1
-    is_not_enough = 2
-#
 class RNNModelException(Exception):
     ''' RNN model's root Exception
     '''
     pass
-
+class DataNotComptible(RNNModelException):
+    has_non_float = 1
+    is_not_enough = 2
+class NoRawDataFileFound(RNNModelException):
+    pass
 
