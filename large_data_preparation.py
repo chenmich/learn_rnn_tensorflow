@@ -272,9 +272,6 @@ class InputData():
             And The first three parts are unified as training data
         '''
         fsys = self.__fsys_data__
-        #if fsys.exists(self.__default_result_data_dir__) is True:
-        #    fsys.removetree(self.__default_result_data_dir__)
-        #self.__setup_result_dir__()
         files = self._get_files(self.__default_raw_data_dir__, self.__raw_file_wildcard__)
         if len(files) == 0:
             raise rnn_model_exception.NoRawDataFileFound('There are any files of raw data found')
@@ -344,7 +341,8 @@ class InputData():
                 if self.__fsys_data__.getdetails(_file).size < self.__size_result_file__:
                     filename = _file
                     break
-        if filename == None: filename = self.__create_filename__(files)
+        if filename == None: 
+            filename = self.__create_filename__(files)
         fp = self.__fsys_data__.open(pure_path + filename, mode='a')
         return fp
 
@@ -358,9 +356,9 @@ class InputData():
         '''
         _file = files[len(files) - 1]
         _filename = _file.split('.')
-        file_base = _filename[0][0:-self.__bytes_of_file_number__]
+        file_base = _filename[0][0:-self.__bits_of_file_number__]
         file_suffix = _filename[1]
-        file_number = int(_filename[0][-self.__bytes_of_file_number__:])
+        file_number = int(_filename[0][-self.__bits_of_file_number__:])
         file_number += 1
         string_number = None
         if file_number >= 100: string_number = str(file_number)
