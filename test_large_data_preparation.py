@@ -74,6 +74,30 @@ class test_get_files(tf.test.TestCase):
         fsys.close()
 
 #
+class test_setup_result_dir(tf.test.TestCase):
+
+    def test_setup_result_dir(self):
+        inputdata = ldp.InputData(get_fsys(), MAX_STEP, FEATURE_SIZE)
+        inputdata.__setup_result_dir__()
+        fsys = inputdata.__fsys_data__
+        pure_path = inputdata.__default_result_data_dir__
+        self.assertTrue(fsys.exists(pure_path))
+        self.assertTrue(fsys.exists(pure_path + 'logerror.txt'))
+        self.assertTrue(fsys.exists(pure_path + 'test' +
+                                    inputdata.__bits_of_file_number__*'0' + '.tfrecord'))
+        self.assertTrue(fsys.exists(pure_path + 'prediction' +
+                                    inputdata.__bits_of_file_number__*'0' + '.tfrecord'))
+        self.assertTrue(fsys.exists(pure_path + 'train' +
+                                    inputdata.__bits_of_file_number__*'0' + '.tfrecord'))
+        self.assertTrue(fsys.exists(pure_path + 'valid' +
+                                    inputdata.__bits_of_file_number__*'0' + '.tfrecord'))
+        with fsys.open(pure_path + 'logerror.txt', mode='r') as logerror:
+            reader = csv.reader(logerror)
+            line = next(reader)
+            self.assertEqual(line[0], 'file_name')
+            self.assertEqual(line[1], 'error_type')
+
+#
 class test_make_example(tf.test.TestCase):
     ''' This class test method _make_examples
     '''

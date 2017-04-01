@@ -209,11 +209,11 @@ class InputData():
         self.__max_step__ = max_step
         self.__feature_size__ = feature_size
         self.__size_result_file__ = 30*1024*1024
-        self.__bytes_of_file_number__ = 5
+        self.__bits_of_file_number__ = 5
         #file system
         self.__default_raw_data_dir__ = 'raw_data/'
         self.__default_result_data_dir__ = 'result_data/' + 'dataset' + str(max_step) + '/'
-        self.__default_log_file__ = 'logerror.txt'
+        self.__default_log_file__ = 'logerror*.txt'
         self.__fsys_data__ = fsys_data
         #tf.sequenceExample
         self.__default_tfexample_input_sequence__ = 'input_sequence'
@@ -234,6 +234,34 @@ class InputData():
         if self.__fsys_data__.exists(self.__default_result_data_dir__) is not True:
             self.__fsys_data__.makedir(self.__default_result_data_dir__)
 
+
+    def __setup_result_dir__(self):
+        def __createneededfiles__(match):
+            fsys = self.__fsys_data__
+            pure_path = self.__default_result_data_dir__
+            filename = ''
+            file_name = match.split('*')
+            if match == self.__default_log_file__:
+                filename = file_name[0] + file_name[1]
+                if fsys.exists(pure_path + filename) is not True:
+                    with fsys.open(pure_path + filename, mode="w") as logerror:
+                        writer = csv.writer(logerror)
+                        writer.writerow(['file_name', 'error_type'])
+            else:
+                filename = file_name[0] + self.__bits_of_file_number__*'0' + file_name[1]
+                if fsys.exists(pure_path + filename) is not True:
+                    fsys.create(pure_path + filename)
+
+        fsys = self.__fsys_data__
+        pure_path = self.__default_result_data_dir__
+        if fsys.exists(pure_path) is not True:
+            fsys.makedir(pure_path)
+        __createneededfiles__(self.__default_log_file__)
+        __createneededfiles__(self.__default_prediction_tfrecordfile__)
+        __createneededfiles__(self.__default_test_tfrecordfile__)
+        __createneededfiles__(self.__default_train_tfrecordfile__)
+        __createneededfiles__(self.__default_valid_tfrecordfile__)
+
     #
     def make_examples(self):
         ''' This method will divided raw to four parts
@@ -243,9 +271,10 @@ class InputData():
             The fouth of the parts will be used to predict the future value
             And The first three parts are unified as training data
         '''
-        #The examples for prediction will save to file of json file format
+        fsys = self.__fsys_data__
         files = self._get_files(self.__default_raw_data_dir__, self.__raw_file_wildcard__)
-        if len(files) == 0: return
+        if len(files) == 0:
+            raise rnn_model_exception.NoRawDataFileFound('There are any files of raw data found')
         #randomly shuffle the order of files
         files_array = np.array(files)
         np.random.shuffle(files_array)
@@ -312,7 +341,8 @@ class InputData():
                 if self.__fsys_data__.getdetails(_file).size < self.__size_result_file__:
                     filename = _file
                     break
-        if filename == None: filename = self.__create_filename__(files)
+        if filename == None: 
+            filename = self.__create_filename__(files)
         fp = self.__fsys_data__.open(pure_path + filename, mode='a')
         return fp
 
@@ -326,9 +356,9 @@ class InputData():
         '''
         _file = files[len(files) - 1]
         _filename = _file.split('.')
-        file_base = _filename[0][0:-self.__bytes_of_file_number__]
+        file_base = _filename[0][0:-self.__bits_of_file_number__]
         file_suffix = _filename[1]
-        file_number = int(_filename[0][-self.__bytes_of_file_number__:])
+        file_number = int(_filename[0][-self.__bits_of_file_number__:])
         file_number += 1
         string_number = None
         if file_number >= 100: string_number = str(file_number)
