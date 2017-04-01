@@ -220,6 +220,8 @@ class InputData():
         self.__default_tfexample_target_sequence__ = 'target_sequence'
         self.__default_tfcontext_token__ = 'token'
         self.__default_tfcontext_sequent_length__ = 'length'
+        self.__prediction_sequence_start_date__ = 'start'
+        self.__prediction_sequence_end_date__ = 'end'
         #file match symobles
         #tfrecord file
         self.__default_prediction_tfrecordfile__ = 'prediction*.tfrecord'
@@ -234,7 +236,7 @@ class InputData():
         if self.__fsys_data__.exists(self.__default_result_data_dir__) is not True:
             self.__fsys_data__.makedir(self.__default_result_data_dir__)
 
-
+    #
     def __setup_result_dir__(self):
         def __createneededfiles__(match):
             fsys = self.__fsys_data__
@@ -303,21 +305,8 @@ class InputData():
                 file_name: file name with extension of a raw file
                            the file name is key dictionary for examples for prediction
         '''
-        length = self.__max_step__
-        _token = bytes(token, 'utf-8')
-        _sequence = np.array(lines)
-        _sequence = _sequence[:, 1:]
-        _sequence = _sequence.flatten().tolist()
-        ex = tf.train.SequenceExample()
-        context_sequent_length = self.__default_tfcontext_sequent_length__
-        context_token = self.__default_tfcontext_token__
-        input_sequence = self.__default_tfexample_input_sequence__
-        ex.context.feature[context_sequent_length].int64_list.value.append(length)
-        ex.context.feature[context_token].bytes_list.value.append(_token)
-        input_feature = ex.feature_lists.feature_list[input_sequence]
-        for x in _sequence:
-            input_feature.feature.add().float_list.value.append(x)
-        self._save_example_for_prediction(ex)
+        ex = self._encode_prediction_example(lines, token)
+        #self._save_example_for_prediction(ex)
 
     #
     def _save_example_for_prediction(self, ex):
@@ -341,11 +330,68 @@ class InputData():
                 if self.__fsys_data__.getdetails(_file).size < self.__size_result_file__:
                     filename = _file
                     break
-        if filename == None: 
+        if filename == None:
             filename = self.__create_filename__(files)
         fp = self.__fsys_data__.open(pure_path + filename, mode='a')
         return fp
+    #
+    def _encode_prediction_example(self, lines, token):
+        length = self.__max_step__
+        _token = bytes(token, 'utf-8')
 
+        # In the raw data file, the data line for the later exchange date is at the forefront
+        start_line = lines[length -1]
+        start = bytes(start_line[0], 'utf-8')
+        end_line = lines[0]
+        end = bytes(end_line[0], 'utf-8')        
+        lines.reverse()
+        #divide the price and date of exchange
+        _lines = [line[1:] for line in lines] 
+        #get the lines flatten to store
+        sequence = np.array(_lines)
+        sequence = sequence.flatten().tolist()
+        ex = tf.train.SequenceExample()
+
+        context_sequent_length = self.__default_tfcontext_sequent_length__
+        context_token = self.__default_tfcontext_token__
+        context_start = self.__prediction_sequence_start_date__
+        context_end = self.__prediction_sequence_end_date__
+        input_sequence = self.__default_tfexample_input_sequence__
+
+        ex.context.feature[context_sequent_length].int64_list.value.append(length)
+        ex.context.feature[context_token].bytes_list.value.append(_token)
+        ex.context.feature[context_start].bytes_list.value.append(start)
+        ex.context.feature[context_end].bytes_list.value.append(end)
+        
+        input_feature = ex.feature_lists.feature_list[input_sequence]
+        n = 0
+        for x in sequence:
+            input_feature.feature.add().float_list.value.append(x)
+            n += 1
+        
+        return ex
+    #
+    def _decode_prediction_example(self, ex):
+        ex_serial = ex.SerializeToString()
+        context_features = {self.__default_tfcontext_token__:
+                                tf.FixedLenFeature([], dtype=tf.string),
+                            self.__default_tfcontext_sequent_length__:
+                                tf.FixedLenFeature([], dtype=tf.int64),
+                            self.__prediction_sequence_end_date__:
+                                tf.FixedLenFeature([], dtype=tf.string),
+                            self.__prediction_sequence_start_date__:
+                                tf.FixedLenFeature([], dtype=tf.string)
+                            }
+        sequence_features = {self.__default_tfexample_input_sequence__:
+                                tf.FixedLenSequenceFeature([], dtype=tf.float32)
+                            }
+        context_parsed, sequence_parsed = tf.parse_single_sequence_example(
+            serialized=ex_serial,
+            context_features=context_features,
+            sequence_features=sequence_features
+            )
+        return context_parsed, sequence_parsed
+    #
     def __create_filename__(self, files):
         ''' The form of name of result data are "prediction000.tfrecord"
             The number in name of file is the "000"
@@ -370,7 +416,7 @@ class InputData():
     def _get_files(self, pure_path, match):
         ''' This method get all the files in specified raw data dir
         '''
-        _filelist = list(self.__fsys_data__.filterdir(pure_path, 
+        _filelist = list(self.__fsys_data__.filterdir(pure_path,
                                                       files=[match]))
         filelist = [x.name for x in _filelist]        
         return filelist

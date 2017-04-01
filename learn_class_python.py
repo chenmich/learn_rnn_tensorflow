@@ -6,24 +6,15 @@
     Dynamic language make it easier to install double
 '''
 
-def replaceFunction(obj,y):
-    obj.someFunctionCalled = True
-
-
-class some():
-    def someFunction(self, x):
-        print(x)
-
-#before test double is installed
-someInstance = some()
-someInstance.someFunction('x')
-
-#install test double
-someInstance.someFunctionCalled = False
-someInstance.someFunction=replaceFunction
-
-#after test double is installed
-someInstance.someFunction(someInstance, 'y')
-assert someInstance.someFunctionCalled is not False
-
-
+class baseclass():
+    def a(self):
+        self.b()
+    def b(self):
+        print("in base")
+    def c(self):
+        print("in base.c")
+class drivedclass(baseclass):
+    def b(self):
+        self.c()
+dc = drivedclass()
+dc.a()

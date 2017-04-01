@@ -35,7 +35,7 @@ def get_fsys():
     model_data_fs.makedir('data')
     model_data_fs.makedir('data/raw_data')
     model_data_fs.makedir('data/result_data')
-    _raw_data = np.arange(20000).reshape(4000, 5).tolist()
+    _raw_data = np.random.normal(loc=0.0, scale=1.0, size=20000).reshape(4000, 5).tolist()
     filenames = ['some00000.csv', 'some00001.csv', 'some00002.csv',
                  'some00003.csv', 'some00004.csv']
 
@@ -44,7 +44,7 @@ def get_fsys():
             writer = csv.writer(csvfile)
             writer.writerow(['data', 'open', 'close', 'max', 'min', 'volumn'])
             for line in _raw_data:
-                writer.writerow([datetime.datetime.now()] + line)
+                writer.writerow([str(datetime.date.today())] + line)
     return model_data_fs.opendir('data')
 
 #
@@ -207,56 +207,33 @@ class test_raw_data_check(tf.test.TestCase):
         self.assertGreater(len(_lines), 0)
 
 #
-class test_make_examples_for_prediction(tf.test.TestCase):
+class test_encode_decode_example_prediction(tf.test.TestCase):
     def setUp(self):
         self.fsys = get_fsys()
     def tearDown(self):
         self.fsys.close()
-    def test_make_single_example(self):
+    def test_encode_decode_example_prediction(self):
         ''' test the method _make_examples_for_prediction
             of InputData creates tf.train.SequenceExample
         '''
         #preparation
-        class InputData_MakeSingleExample(ldp.InputData):
-            ''' from _save_example_for_prediction check the indirect output
-                of _make_examples_for_prediction
-                so the method _save_example_for_prediction will be overridden as check point
-            '''
-            self.__context_parsed__ = None
-            self.__sequence_parsed__ = None
-            def _save_example_for_prediction(self, ex):
-                ''' parser the ex to valid if it is created correctly
-                '''
-                ex_serial = ex.SerializeToString()
-                context_features = {self.__default_tfcontext_token__:
-                                        tf.FixedLenFeature([], dtype=tf.string),
-                                    self.__default_tfcontext_sequent_length__:
-                                        tf.FixedLenFeature([], dtype=tf.int64)
-                                   }
-                sequence_features = {self.__default_tfexample_input_sequence__:
-                                     tf.FixedLenSequenceFeature([], dtype=tf.float32)
-                                    }
-                context_parsed, sequence_parsed = tf.parse_single_sequence_example(
-                    serialized=ex_serial,
-                    context_features=context_features,
-                    sequence_features=sequence_features
-                    )
-                self.__context_parsed__ = context_parsed
-                self.__sequence_parsed__ = sequence_parsed
-
         #
         _lines_array = np.random.normal(size=MAX_STEP*FEATURE_SIZE)
         _lines = _lines_array.reshape(MAX_STEP, FEATURE_SIZE).tolist()
-        lines = [[datetime.datetime.now()] + _line for _line in _lines]
-        initdata = InputData_MakeSingleExample(self.fsys, MAX_STEP, FEATURE_SIZE)
+        #simulate the raw data
+        lines = [[str(datetime.date.today())] + _line for _line in _lines]
+        start_expect = bytes(lines[MAX_STEP - 1][0], 'utf-8')
+        end_expect = bytes(lines[0][0], 'utf-8')
+        inputdata = ldp.InputData(self.fsys, MAX_STEP, FEATURE_SIZE)
+        context_token = inputdata.__default_tfcontext_token__
+        context_length = inputdata.__default_tfcontext_sequent_length__
+        context_start = inputdata.__prediction_sequence_start_date__
+        context_end = inputdata.__prediction_sequence_end_date__
+        input_sequence = inputdata.__default_tfexample_input_sequence__
         #exercise
-        initdata._make_examples_for_prediction(lines, 'some00000')
+        ex = inputdata._encode_prediction_example(lines, 'some00000')
         #valid
-        context_token = initdata.__default_tfcontext_token__
-        context_length = initdata.__default_tfcontext_sequent_length__
-        input_sequence = initdata.__default_tfexample_input_sequence__
-        context_parsed = initdata.__context_parsed__
-        sequence_parsed = initdata.__sequence_parsed__
+        context_parsed, sequence_parsed = inputdata._decode_prediction_example(ex)
         with tf.Session() as sess:
             self.assertEqual(
                 sess.run(context_parsed[context_token]),
@@ -264,16 +241,28 @@ class test_make_examples_for_prediction(tf.test.TestCase):
             self.assertEqual(
                 sess.run(context_parsed[context_length]),
                 MAX_STEP)
+            self.assertEqual(
+                sess.run(context_parsed[context_start]),
+                start_expect
+            )
+            self.assertEqual(
+                sess.run(context_parsed[context_end]),
+                end_expect
+            )
+            shape = sequence_parsed[input_sequence].get_shape()
             real = sess.run(sequence_parsed[input_sequence])
-            self.assertAllClose(real, _lines_array)
+            _lines.reverse()
+            expect = np.array(_lines).flatten()
+            self.assertAllClose(real, expect)
+    #
     def test_save_example_for_prediction(self):
         _lines_array = np.random.normal(size=MAX_STEP*FEATURE_SIZE)
         _lines = _lines_array.reshape(MAX_STEP, FEATURE_SIZE).tolist()
-        lines = [[datetime.datetime.now()] + _line for _line in _lines]
+        lines = [[str(datetime.date.today())] + _line for _line in _lines]
         initdata = ldp.InputData(self.fsys, MAX_STEP, FEATURE_SIZE)
         #exercise
         initdata._make_examples_for_prediction(lines, 'some00000')
-        path = initdata.__fsys_data__ + initdata.__default_prediction_tfrecordfile__
+        path = initdata.__default_result_data_dir__ + initdata.__default_prediction_tfrecordfile__
         info = initdata.__fsys_data__.getdetails(path)
         self.assertGreater(info.size, 0)
 #
