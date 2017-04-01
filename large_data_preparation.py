@@ -371,8 +371,7 @@ class InputData():
         
         return ex
     #
-    def _decode_prediction_example(self, ex):
-        ex_serial = ex.SerializeToString()
+    def _decode_prediction_example(self, ex_serial):
         context_features = {self.__default_tfcontext_token__:
                                 tf.FixedLenFeature([], dtype=tf.string),
                             self.__default_tfcontext_sequent_length__:

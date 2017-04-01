@@ -233,7 +233,7 @@ class test_encode_decode_example_prediction(tf.test.TestCase):
         #exercise
         ex = inputdata._encode_prediction_example(lines, 'some00000')
         #valid
-        context_parsed, sequence_parsed = inputdata._decode_prediction_example(ex)
+        context_parsed, sequence_parsed = inputdata._decode_prediction_example(ex.SerializeToString())
         with tf.Session() as sess:
             self.assertEqual(
                 sess.run(context_parsed[context_token]),
@@ -255,16 +255,7 @@ class test_encode_decode_example_prediction(tf.test.TestCase):
             expect = np.array(_lines).flatten()
             self.assertAllClose(real, expect)
     #
-    def test_save_example_for_prediction(self):
-        _lines_array = np.random.normal(size=MAX_STEP*FEATURE_SIZE)
-        _lines = _lines_array.reshape(MAX_STEP, FEATURE_SIZE).tolist()
-        lines = [[str(datetime.date.today())] + _line for _line in _lines]
-        initdata = ldp.InputData(self.fsys, MAX_STEP, FEATURE_SIZE)
-        #exercise
-        initdata._make_examples_for_prediction(lines, 'some00000')
-        path = initdata.__default_result_data_dir__ + initdata.__default_prediction_tfrecordfile__
-        info = initdata.__fsys_data__.getdetails(path)
-        self.assertGreater(info.size, 0)
+    
 #
 if __name__ == "__main__":
     tf.test.main()
