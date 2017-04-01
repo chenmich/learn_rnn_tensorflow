@@ -295,7 +295,7 @@ class InputData():
                                              token)
 
     #
-    def _make_examples_for_prediction(self, lines, token):
+    def _make_examples_for_prediction(self, lines, token)
         ''' The raw data will be divided to four parts. one of the four parts is for prediction
             for real price
             This method is make all the examples for prediction
@@ -306,44 +306,30 @@ class InputData():
                            the file name is key dictionary for examples for prediction
         '''
         ex = self._encode_prediction_example(lines, token)
-        #self._save_example_for_prediction(ex)
-
+    
     #
-    def _save_example_for_prediction(self, ex):
-        ''' This method will save example for prediction to a tfrecord file
+    def _make_examples_for_trains(self, lines, token):
+        ''' The examples for train are consist of the three parts.
+            The first part is for train. The second part is for valid for fine adjustment
+            of the hyperparameter. And the third part is for test of model
+            This method will divide the lines into the three parts
+            This method will save all the examples, so there is no return values
             args:
-                ex: an instance of class tf.train.SequenceExample
+                lines: all the raw data in list
         '''
-        pure_path = self.__default_result_data_dir__
-        fp = self.__get_result_data_file_object(self.__default_prediction_tfrecordfile__)
-        writer = tf.python_io.TFRecordWriter(fp.name)
-        writer.write(ex.SerializeToString())
-        writer.close()
-        fp.close()
-    #
-    def __get_result_data_file_object(self, match):
-        pure_path = self.__default_result_data_dir__
-        files = self._get_files(pure_path, match)
-        filename = None
-        if len(files) >= 0:
-            for _file in files:
-                if self.__fsys_data__.getdetails(_file).size < self.__size_result_file__:
-                    filename = _file
-                    break
-        if filename == None:
-            filename = self.__create_filename__(files)
-        fp = self.__fsys_data__.open(pure_path + filename, mode='a')
-        return fp
+        raise Exception('The method _make_training_examples is not impletmented!')
+    
     #
     def _encode_prediction_example(self, lines, token):
         length = self.__max_step__
         _token = bytes(token, 'utf-8')
-
+        #note:the data of date of exchange are tried to keeped as much as posssible 
         # In the raw data file, the data line for the later exchange date is at the forefront
         start_line = lines[length -1]
         start = bytes(start_line[0], 'utf-8')
         end_line = lines[0]
-        end = bytes(end_line[0], 'utf-8')        
+        end = bytes(end_line[0], 'utf-8')
+        #the data which is produced by Earlier date of exchange should be feed to rnn       
         lines.reverse()
         #divide the price and date of exchange
         _lines = [line[1:] for line in lines] 
@@ -391,6 +377,12 @@ class InputData():
             )
         return context_parsed, sequence_parsed
     #
+    def _encode_train_example(self, lines, token):
+        raise Exception("the method _encode_train_example is not impletemented!")
+    #
+    def _decode_train_example(self, ex_serial):
+        raise Exception("the method _decode_train_example is not impletemented!")
+    #
     def __create_filename__(self, files):
         ''' The form of name of result data are "prediction000.tfrecord"
             The number in name of file is the "000"
@@ -419,18 +411,7 @@ class InputData():
                                                       files=[match]))
         filelist = [x.name for x in _filelist]        
         return filelist
-    #
-    def _make_training_examples(self, lines, token):
-        ''' The examples for train are consist of the three parts.
-            The first part is for train. The second part is for valid for fine adjustment
-            of the hyperparameter. And the third part is for test of model
-            This method will divide the lines into the three parts
-            This method will save all the examples, so there is no return values
-            args:
-                lines: all the raw data in list
-        '''
-        raise Exception('The method _make_training_examples is not impletmented!')
-    #
+    #    
     def _raw_data_check(self, filename, lines):
         # This method's resposibilities are to make sure that number of lines is enough
         # and that the needed string can be converted to number
@@ -451,6 +432,7 @@ class InputData():
                     tmp = line[0]
                     line_data = line[1:]
                     tmp_data = [float(x) for x in line_data]
+                    #Try to keep date data as much as possible
                     lines.append([tmp] + tmp_data)
                 except ValueError:
                     _is_comptible = False
