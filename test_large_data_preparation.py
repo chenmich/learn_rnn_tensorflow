@@ -110,9 +110,11 @@ class test_make_example(tf.test.TestCase):
         # preparation for test
         class InputDataForTest_Pred(ldp.InputData):
             self._make_examples_for_prediction_called = False
-            def _raw_data_check(self, filename, lines):
+            def _raw_data_check(self, filename):
                 # force to return a True fot to test if _make_examples will call the method
-                return True
+                lines = np.random.normal(size=10*MAX_STEP*FEATURE_SIZE).reshape(
+                    10*MAX_STEP, FEATURE_SIZE).tolist()
+                return True, lines
             def _make_examples_for_prediction(self, lines, tokens):
                 self._make_examples_for_prediction_called = True
             # separat the effect of this method
@@ -129,13 +131,16 @@ class test_make_example(tf.test.TestCase):
         # preparation for test
         class InputDataForTest_Train(ldp.InputData):
             self._make_training_examples_called = False
-            def _raw_data_check(self, filename, lines):
+            def _raw_data_check(self, filename):
                 # force to return a True fot to test if _make_examples will call the method
-                return True
+                lines = np.random.normal(size=10*MAX_STEP*FEATURE_SIZE).reshape(
+                    10*MAX_STEP, FEATURE_SIZE).tolist()
+                return True, lines
             def _make_examples_for_prediction(self, lines, tokens):
                 pass
             def _make_examples_for_trains(self, lines, tokens):
                 self._make_training_examples_called = True
+
         inputdata = InputDataForTest_Train(self.fsys, MAX_STEP, FEATURE_SIZE)
         inputdata.make_examples()
         self.assertTrue(inputdata._make_training_examples_called)
@@ -148,7 +153,7 @@ class test_raw_data_check(tf.test.TestCase):
     def test_raw_data_check_True(self):
         inputdata = ldp.InputData(self.fsys, MAX_STEP, FEATURE_SIZE)
         lines = []
-        self.assertTrue(inputdata._raw_data_check('some00000.csv', lines))
+        self.assertTrue(inputdata._raw_data_check('some00000.csv'))
     #
     def test_raw_data_check_Length_Not_Enough(self):
         lines = np.arange((MAX_STEP - 1) * FEATURE_SIZE).reshape(MAX_STEP - 1,
@@ -159,22 +164,10 @@ class test_raw_data_check(tf.test.TestCase):
             for line in lines:
                 writer.writerow(line)
         inputdata = ldp.InputData(self.fsys, MAX_STEP, FEATURE_SIZE)
-        lines = []
-        self.assertFalse(inputdata._raw_data_check('some00005.csv', []))
-        # valid the problem not to be comptible logged correctly
-        log_path = inputdata.__default_result_data_dir__ + inputdata.__default_log_file__
-        '''
-        logcontent = []
-        with self.fsys.open(path, mode='r') as logerror:
-            reader = csv.reader(logerror)
-            next(reader)
-            logcontent = next(reader)
-        self.assertEqual(logcontent[0], 'some00005.csv')
-        self.assertEqual(int(logcontent[1]), rnn_model_exception.DataNotComptible.is_not_enough)
-        '''
-        #try refactor
-        logcontent = ['some00005.csv', rnn_model_exception.DataNotComptible.is_not_enough]
-        self.__raw_not_comptible_log_assertion(log_path, logcontent)
+        is_comptible, lines = inputdata._raw_data_check('some00005.csv')
+        self.assertFalse(is_comptible)
+        self.assertLess(len(lines), MAX_STEP)
+
     #
     def test_raw_data_check_has_non_number(self):
         lines = np.arange(MAX_STEP * FEATURE_SIZE).reshape(MAX_STEP, FEATURE_SIZE).tolist()
@@ -188,7 +181,7 @@ class test_raw_data_check(tf.test.TestCase):
                 writer.writerow(_line)
         inputdata = ldp.InputData(self.fsys, MAX_STEP, FEATURE_SIZE)
         lines = []
-        self.assertFalse(inputdata._raw_data_check('some00005.csv', lines))
+        self.assertFalse(inputdata._raw_data_check('some00005.csv'))
         # valid the problem not to be comptible logged correctly
         log_path = inputdata.__default_result_data_dir__ + inputdata.__default_log_file__
         logcontent = ['some00005.csv', rnn_model_exception.DataNotComptible.has_non_float]
@@ -201,10 +194,10 @@ class test_raw_data_check(tf.test.TestCase):
         self.assertEqual(_logcontent[0], logcontent[0])
         self.assertEqual(int(_logcontent[1]), logcontent[1])
     def test_raw_data_check_result(self):
-        _lines = []
         inputdata = ldp.InputData(self.fsys, MAX_STEP, FEATURE_SIZE)
-        inputdata._raw_data_check("some00001.csv", _lines)
-        self.assertGreater(len(_lines), 0)
+        is_comptible, lines = inputdata._raw_data_check("some00001.csv")
+        self.assertGreater(len(lines), 0)
+        self.assertTrue(is_comptible)
 
 #
 class test_encode_decode_example_prediction(tf.test.TestCase):
@@ -260,14 +253,6 @@ class test_encode_decode_example_prediction(tf.test.TestCase):
     #
 
 #
-class test_encode_decode_example_trains(tf.test.TestCase):
-    ''' the examples for trains will have same structure
-        this test will test procsess of encode and decode of single example
-        To divid line of raw data to build examples is the responsiblity
-        of method make_example_for_trains
-    '''
-    #raise Exception("test_encode_decode_example_trains is not impletmented!")
-
 #
 class test_make_example_for_trains(tf.test.TestCase):
     ''' this test is for make_for_trains

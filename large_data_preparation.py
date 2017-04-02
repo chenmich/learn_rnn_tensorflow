@@ -286,7 +286,8 @@ class InputData():
         for raw_file in files:
             # if comptible, data converted to float will be stored in _lines
             # after _raw_data_check is called
-            if self._raw_data_check(raw_file, _lines):
+            is_comptible, lines = self._raw_data_check(raw_file)
+            if is_comptible:
                 token = raw_file.split('.')[0]
                 token = token.split('_')[0]
                 # In the raw data file, the data line
@@ -294,9 +295,9 @@ class InputData():
                 # I will reverse the order
                 _lines.reverse()
                 length = len(_lines)
-                self._make_examples_for_prediction(_lines[0:length - self.__max_step__],
+                self._make_examples_for_prediction(lines[length - self.__max_step__],
                                                    token)
-                self._make_examples_for_trains(_lines[length - self.__max_step__:],
+                self._make_examples_for_trains(lines[length - self.__max_step__:],
                                                token)
             else:#logerror for file of raw data
                 pass
@@ -324,9 +325,9 @@ class InputData():
                 lines: all the raw data in list
         '''
         #divide the lines for example
-        example_lines = self._divide_line(lines)
-        for example_line in example_lines:
-            ex = self._encode_train_example(example_line, token)
+        examples = self._divide_line(lines)
+        for example in examples:
+            ex = self._encode_train_example(example, token)
     #
     def _divide_line(self, raw_data_lines):
         ''' this method will divide the lines of raw data to line of examples
@@ -455,7 +456,7 @@ class InputData():
         filelist = [x.name for x in _filelist]
         return filelist
     #
-    def _raw_data_check(self, filename, lines):
+    def _raw_data_check(self, filename):
         # This method's resposibilities are to make sure that number of lines is enough
         # and that the needed string can be converted to number
         # If it is not comptible, this method log it
@@ -465,6 +466,7 @@ class InputData():
                 lines: lines of data. It is a list
         '''
         _is_comptible = True
+        lines = []
         with self.__fsys_data__.open(self.__default_raw_data_dir__ + filename,
                                      mode='r') as raw_file:
 
@@ -480,8 +482,8 @@ class InputData():
                 except ValueError:
                     _is_comptible = False
                     #log
-                    self.__log_data_not_comptible__(filename,
-                                                    rnn_model_exception.DataNotComptible.has_non_float)
+                    self.__log_data_not_comptible__(
+                        filename, rnn_model_exception.DataNotComptible.has_non_float)
                     return _is_comptible
         length = len(lines)
         if length < self.__max_step__:
@@ -489,7 +491,7 @@ class InputData():
             #log
             self.__log_data_not_comptible__(filename,
                                             rnn_model_exception.DataNotComptible.is_not_enough)
-        return _is_comptible
+        return _is_comptible, lines
     #
     def __log_data_not_comptible__(self, filename, error_type):
         def __createlogerrorfile__(path):
