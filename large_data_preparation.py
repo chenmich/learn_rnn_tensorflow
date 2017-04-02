@@ -289,13 +289,19 @@ class InputData():
             if self._raw_data_check(raw_file, _lines):
                 token = raw_file.split('.')[0]
                 token = token.split('_')[0]
-                self._make_examples_for_prediction(_lines[0:self.__max_step__],
+                # In the raw data file, the data line
+                # for the later exchange date is at the forefront
+                # I will reverse the order
+                _lines.reverse()
+                length = len(_lines)
+                self._make_examples_for_prediction(_lines[0:length - self.__max_step__],
                                                    token)
-                self._make_training_examples(_lines[self.__max_step__:],
-                                             token)
-
+                self._make_examples_for_trains(_lines[length - self.__max_step__:],
+                                               token)
+            else:#logerror for file of raw data
+                pass
     #
-    def _make_examples_for_prediction(self, lines, token)
+    def _make_examples_for_prediction(self, lines, token):
         ''' The raw data will be divided to four parts. one of the four parts is for prediction
             for real price
             This method is make all the examples for prediction
@@ -306,7 +312,7 @@ class InputData():
                            the file name is key dictionary for examples for prediction
         '''
         ex = self._encode_prediction_example(lines, token)
-    
+
     #
     def _make_examples_for_trains(self, lines, token):
         ''' The examples for train are consist of the three parts.
@@ -317,44 +323,81 @@ class InputData():
             args:
                 lines: all the raw data in list
         '''
-        raise Exception('The method _make_training_examples is not impletmented!')
-    
+        #divide the lines for example
+        example_lines = self._divide_line(lines)
+        for example_line in example_lines:
+            ex = self._encode_train_example(example_line, token)
+    #
+    def _divide_line(self, raw_data_lines):
+        ''' this method will divide the lines of raw data to line of examples
+            args:
+                lines: line of raw data
+                return: list of line of example
+        '''
+        #begin to make examples
+        max_step = self.__max_step__
+        has_short_example = False
+        length = len(raw_data_lines)
+        #assume that at this time, all the example's length is self.__max_step__
+        num_examples = length // (2*max_step)
+        if length % (2*max_step) != 0:#There is a short example
+            num_examples += 1
+            has_short_example = True
+        #make examples
+        examples = []
+        for n in range(num_examples):
+            input_sequence = []
+            target_sequence = []
+            _start = 2*n*max_step
+            _end = _start + 2*max_step
+            _tmp = []
+            if n < num_examples - 1:
+                _tmp = raw_data_lines[_start: _end]
+                input_sequence = _tmp[0: max_step]
+                target_sequence = _tmp[max_step:]
+            else:
+                if has_short_example:
+                    _tmp = raw_data_lines[_start:]
+                    input_sequence = _tmp[0: max_step // 2]
+                    target_sequence = _tmp[max_step//2:]
+            examples.append({'input_sequence': input_sequence,
+                             'target_sequence': target_sequence})
+        return examples
+
+
     #
     def _encode_prediction_example(self, lines, token):
+        #proccess the lines
         length = self.__max_step__
         _token = bytes(token, 'utf-8')
-        #note:the data of date of exchange are tried to keeped as much as posssible 
+        #note:the data of date of exchange are tried to keeped as much as posssible
         # In the raw data file, the data line for the later exchange date is at the forefront
-        start_line = lines[length -1]
+        start_line = lines[0]
         start = bytes(start_line[0], 'utf-8')
-        end_line = lines[0]
+        end_line = lines[length - 1]
         end = bytes(end_line[0], 'utf-8')
-        #the data which is produced by Earlier date of exchange should be feed to rnn       
-        lines.reverse()
         #divide the price and date of exchange
-        _lines = [line[1:] for line in lines] 
+        _lines = [line[1:] for line in lines]
         #get the lines flatten to store
         sequence = np.array(_lines)
         sequence = sequence.flatten().tolist()
-        ex = tf.train.SequenceExample()
 
+        #prepared for ex
         context_sequent_length = self.__default_tfcontext_sequent_length__
         context_token = self.__default_tfcontext_token__
         context_start = self.__prediction_sequence_start_date__
         context_end = self.__prediction_sequence_end_date__
         input_sequence = self.__default_tfexample_input_sequence__
 
+        #build ex
+        ex = tf.train.SequenceExample()
         ex.context.feature[context_sequent_length].int64_list.value.append(length)
         ex.context.feature[context_token].bytes_list.value.append(_token)
         ex.context.feature[context_start].bytes_list.value.append(start)
         ex.context.feature[context_end].bytes_list.value.append(end)
-        
         input_feature = ex.feature_lists.feature_list[input_sequence]
-        n = 0
         for x in sequence:
             input_feature.feature.add().float_list.value.append(x)
-            n += 1
-        
         return ex
     #
     def _decode_prediction_example(self, ex_serial):
@@ -366,10 +409,10 @@ class InputData():
                                 tf.FixedLenFeature([], dtype=tf.string),
                             self.__prediction_sequence_start_date__:
                                 tf.FixedLenFeature([], dtype=tf.string)
-                            }
+                           }
         sequence_features = {self.__default_tfexample_input_sequence__:
-                                tf.FixedLenSequenceFeature([], dtype=tf.float32)
-                            }
+                             tf.FixedLenSequenceFeature([], dtype=tf.float32)
+                             }
         context_parsed, sequence_parsed = tf.parse_single_sequence_example(
             serialized=ex_serial,
             context_features=context_features,
@@ -409,9 +452,9 @@ class InputData():
         '''
         _filelist = list(self.__fsys_data__.filterdir(pure_path,
                                                       files=[match]))
-        filelist = [x.name for x in _filelist]        
+        filelist = [x.name for x in _filelist]
         return filelist
-    #    
+    #
     def _raw_data_check(self, filename, lines):
         # This method's resposibilities are to make sure that number of lines is enough
         # and that the needed string can be converted to number
@@ -438,14 +481,14 @@ class InputData():
                     _is_comptible = False
                     #log
                     self.__log_data_not_comptible__(filename,
-                                                 rnn_model_exception.DataNotComptible.has_non_float)
+                                                    rnn_model_exception.DataNotComptible.has_non_float)
                     return _is_comptible
         length = len(lines)
         if length < self.__max_step__:
             _is_comptible = False
             #log
             self.__log_data_not_comptible__(filename,
-                                         rnn_model_exception.DataNotComptible.is_not_enough)
+                                            rnn_model_exception.DataNotComptible.is_not_enough)
         return _is_comptible
     #
     def __log_data_not_comptible__(self, filename, error_type):

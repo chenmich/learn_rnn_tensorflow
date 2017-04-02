@@ -12,4 +12,4 @@ _lines = [[1, 2, 3, 4, 110],[22, 55, 44, 88, 99]]
 
 lines = [[str(datetime.date.today())] + _line for _line in _lines]
 line = [line[1:] for line in lines]
-print(line)
+print(lines)

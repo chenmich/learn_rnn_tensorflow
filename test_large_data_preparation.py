@@ -116,7 +116,7 @@ class test_make_example(tf.test.TestCase):
             def _make_examples_for_prediction(self, lines, tokens):
                 self._make_examples_for_prediction_called = True
             # separat the effect of this method
-            def _make_training_examples(self, lines, tokens):
+            def _make_examples_for_trains(self, lines, tokens):
                 pass
         inputdata = InputDataForTest_Pred(self.fsys, MAX_STEP, FEATURE_SIZE)
         #exercise
@@ -134,7 +134,7 @@ class test_make_example(tf.test.TestCase):
                 return True
             def _make_examples_for_prediction(self, lines, tokens):
                 pass
-            def _make_training_examples(self, lines, tokens):
+            def _make_examples_for_trains(self, lines, tokens):
                 self._make_training_examples_called = True
         inputdata = InputDataForTest_Train(self.fsys, MAX_STEP, FEATURE_SIZE)
         inputdata.make_examples()
@@ -230,10 +230,14 @@ class test_encode_decode_example_prediction(tf.test.TestCase):
         context_start = inputdata.__prediction_sequence_start_date__
         context_end = inputdata.__prediction_sequence_end_date__
         input_sequence = inputdata.__default_tfexample_input_sequence__
+
         #exercise
         ex = inputdata._encode_prediction_example(lines, 'some00000')
+
         #valid
-        context_parsed, sequence_parsed = inputdata._decode_prediction_example(ex.SerializeToString())
+        context_parsed, sequence_parsed = inputdata._decode_prediction_example(
+            ex.SerializeToString())
+
         with tf.Session() as sess:
             self.assertEqual(
                 sess.run(context_parsed[context_token]),
@@ -251,11 +255,56 @@ class test_encode_decode_example_prediction(tf.test.TestCase):
             )
             shape = sequence_parsed[input_sequence].get_shape()
             real = sess.run(sequence_parsed[input_sequence])
-            _lines.reverse()
             expect = np.array(_lines).flatten()
             self.assertAllClose(real, expect)
     #
-    
+
 #
+class test_encode_decode_example_trains(tf.test.TestCase):
+    ''' the examples for trains will have same structure
+        this test will test procsess of encode and decode of single example
+        To divid line of raw data to build examples is the responsiblity
+        of method make_example_for_trains
+    '''
+    #raise Exception("test_encode_decode_example_trains is not impletmented!")
+
+#
+class test_make_example_for_trains(tf.test.TestCase):
+    ''' this test is for make_for_trains
+        Firstly, I will write this test class to complete the test
+        for make_example_for_trains by from top to down
+    '''
+    def setUp(self):
+        self.fsys = get_fsys()
+    def tearDown(self):
+        self.fsys.close()
+    def test_divide_line(self):
+        ''' This test checks whether the divided lines of examples are correct
+            asssume a short example which time step less than specified max_step
+            the number of raw data is 3800,and max_step is 200
+            There will have  max_step lines of input sequence and a max_step of target sequence
+            in a completed example
+        '''
+        token = 'some00000'
+        #prepare the lines of raw data
+        num_example = 10
+        #there are nime full example and one short example
+        num_line = (num_example -1)*(2*MAX_STEP) + MAX_STEP
+        _lines = np.random.normal(loc=0.0, scale=1.0,
+                                  size=num_line*FEATURE_SIZE).reshape(num_line,
+                                                                      FEATURE_SIZE).tolist()
+        #keep the data of date of exchange
+        lines = [[str(datetime.date.today())] + _line for _line in _lines]
+        inputdata = ldp.InputData(self.fsys, MAX_STEP, FEATURE_SIZE)
+        #exercise
+        example_lines = inputdata._divide_line(lines)
+        #at this time, I can determine the structur of example_lines
+        self.assertEqual(num_example, len(example_lines))
+        self.assertEqual(MAX_STEP, len(example_lines[0]['input_sequence']))
+        self.assertEqual(MAX_STEP, len(example_lines[0]['target_sequence']))
+        #the earlier of data the less effect for future price
+        self.assertEqual(MAX_STEP // 2, len(example_lines[num_example - 1]['input_sequence']))
+        self.assertEqual(MAX_STEP // 2, len(example_lines[num_example - 1]['target_sequence']))
+
 if __name__ == "__main__":
     tf.test.main()
