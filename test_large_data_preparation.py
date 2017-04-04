@@ -167,7 +167,6 @@ class test_raw_data_check(tf.test.TestCase):
         is_comptible, lines = inputdata._raw_data_check('some00005.csv')
         self.assertFalse(is_comptible)
         self.assertLess(len(lines), MAX_STEP)
-
     #
     def test_raw_data_check_has_non_number(self):
         lines = np.arange(MAX_STEP * FEATURE_SIZE).reshape(MAX_STEP, FEATURE_SIZE).tolist()
@@ -218,11 +217,11 @@ class test_encode_decode_example_prediction(tf.test.TestCase):
         start_expect = bytes(lines[MAX_STEP - 1][0], 'utf-8')
         end_expect = bytes(lines[0][0], 'utf-8')
         inputdata = ldp.InputData(self.fsys, MAX_STEP, FEATURE_SIZE)
-        context_token = inputdata.__default_tfcontext_token__
-        context_length = inputdata.__default_tfcontext_sequent_length__
-        context_start = inputdata.__prediction_sequence_start_date__
-        context_end = inputdata.__prediction_sequence_end_date__
-        input_sequence = inputdata.__default_tfexample_input_sequence__
+        context_token = inputdata.__default_token__
+        context_length = inputdata.__default_sequent_length__
+        context_start = inputdata.__input_sequence_start_date__
+        context_end = inputdata.__input_sequence_end_date__
+        input_sequence = inputdata.__example_input_sequence__
 
         #exercise
         ex = inputdata._encode_prediction_example(lines, 'some00000')
@@ -253,6 +252,64 @@ class test_encode_decode_example_prediction(tf.test.TestCase):
     #
 
 #
+class test_encode_decode_example_trains(tf.test.TestCase):
+    def setUp(self):
+        self.fsys = get_fsys()
+    def tearDown(self):
+        self.fsys.close()
+    def test_encode_decode(self):
+        ''' This test will encode lines of train example to tf.SequenceExample and decode it
+            And valid the result
+        '''
+        #prepare a example for trains
+        inputdata = ldp.InputData(self.fsys, MAX_STEP, FEATURE_SIZE)
+        max_step = inputdata.__max_step__
+        feature_size = inputdata.__feature_size__
+        _token = 'some00000'
+        _lines = np.random.normal(size=2*max_step*feature_size).reshape(
+            2*max_step, feature_size).tolist()
+        lines = [[str(datetime.date.today())] + _line for _line in _lines]
+        lines.reverse()
+        input_sequence = lines[0:MAX_STEP]
+        target_sequence = lines[MAX_STEP:]
+        example_line = {inputdata.__example_input_sequence__: input_sequence,
+                        inputdata.__example_target_sequence__: target_sequence}
+        #exercise
+        ex = inputdata._encode_train_example(example_line, _token)
+        context_parsed, sequnece_parsed = inputdata._decode_train_example(ex.SerializeToString())
+
+        #prepare expect content
+        input_start = bytes(lines[0][0], 'utf-8')
+        input_end = bytes(lines[max_step - 1][0], 'utf-8')
+        target_start = bytes(lines[max_step][0], 'utf-8')
+        target_end = bytes(lines[2*max_step - 1][0], 'utf-8')
+        token = bytes(_token, 'utf-8')
+        length = len(_lines) // 2
+        _inputs = [line[1:] for line in input_sequence]
+        _target = [line[1:] for line in target_sequence]
+        input_sequence = np.array(_inputs).flatten()
+        target_sequence = np.array(_target).flatten()
+
+        #valid
+        with tf.Session() as sess:
+            self.assertEqual(sess.run(context_parsed[inputdata.__default_sequent_length__]),
+                             length)
+            self.assertEqual(sess.run(context_parsed[inputdata.__default_token__]),
+                             token)
+            self.assertEqual(sess.run(context_parsed[inputdata.__input_sequence_start_date__]),
+                             input_start)
+            self.assertEqual(sess.run(context_parsed[inputdata.__input_sequence_end_date__]),
+                             input_end)
+            self.assertEqual(sess.run(context_parsed[inputdata.__target_sequence_start_date__]),
+                             target_start)
+            self.assertEqual(sess.run(context_parsed[inputdata.__target_sequence_end_date__]),
+                             target_end)
+            self.assertAllClose(sess.run(sequnece_parsed[inputdata.__example_input_sequence__]),
+                                input_sequence)
+            self.assertAllClose(sess.run(sequnece_parsed[inputdata.__example_target_sequence__]),
+                                target_sequence)
+
+
 #
 class test_make_example_for_trains(tf.test.TestCase):
     ''' this test is for make_for_trains
