@@ -216,12 +216,14 @@ class InputData():
         self.__default_log_file__ = 'logerror*.txt'
         self.__fsys_data__ = fsys_data
         #tf.sequenceExample
-        self.__default_tfexample_input_sequence__ = 'input_sequence'
-        self.__default_tfexample_target_sequence__ = 'target_sequence'
-        self.__default_tfcontext_token__ = 'token'
-        self.__default_tfcontext_sequent_length__ = 'length'
-        self.__prediction_sequence_start_date__ = 'start'
-        self.__prediction_sequence_end_date__ = 'end'
+        self.__example_input_sequence__ = 'input_sequence'
+        self.__example_target_sequence__ = 'target_sequence'
+        self.__default_token__ = 'token'
+        self.__default_sequent_length__ = 'length'
+        self.__input_sequence_start_date__ = 'input_start'
+        self.__input_sequence_end_date__ = 'input_end'
+        self.__target_sequence_start_date__ = 'target_start'
+        self.__target_sequence_end_date__ = 'target_end'
         #file match symobles
         #tfrecord file
         self.__default_prediction_tfrecordfile__ = 'prediction*.tfrecord'
@@ -286,17 +288,20 @@ class InputData():
         for raw_file in files:
             # if comptible, data converted to float will be stored in _lines
             # after _raw_data_check is called
-            if self._raw_data_check(raw_file, _lines):
+            is_comptible, lines = self._raw_data_check(raw_file)
+            if is_comptible:
                 token = raw_file.split('.')[0]
+                #there may be several file of ticker for raw data.
+                # I will name it ticker_000.csv, ticker_001.csv and so on
                 token = token.split('_')[0]
                 # In the raw data file, the data line
                 # for the later exchange date is at the forefront
                 # I will reverse the order
                 _lines.reverse()
                 length = len(_lines)
-                self._make_examples_for_prediction(_lines[0:length - self.__max_step__],
+                self._make_examples_for_prediction(lines[length - self.__max_step__],
                                                    token)
-                self._make_examples_for_trains(_lines[length - self.__max_step__:],
+                self._make_examples_for_trains(lines[length - self.__max_step__:],
                                                token)
             else:#logerror for file of raw data
                 pass
@@ -324,9 +329,15 @@ class InputData():
                 lines: all the raw data in list
         '''
         #divide the lines for example
-        example_lines = self._divide_line(lines)
-        for example_line in example_lines:
-            ex = self._encode_train_example(example_line, token)
+        examples = self._divide_line(lines)
+        for example in examples:
+            ex = self._encode_train_example(example, token)
+            ''' At this place, the encoded example must be stored in tfrecord files
+            '''
+            ''' At this place, Here, it must be determined
+                that an example is used for training, testing or verification.
+                Such as for training, to calculate its statistical characteristic values
+            '''
     #
     def _divide_line(self, raw_data_lines):
         ''' this method will divide the lines of raw data to line of examples
@@ -383,11 +394,11 @@ class InputData():
         sequence = sequence.flatten().tolist()
 
         #prepared for ex
-        context_sequent_length = self.__default_tfcontext_sequent_length__
-        context_token = self.__default_tfcontext_token__
-        context_start = self.__prediction_sequence_start_date__
-        context_end = self.__prediction_sequence_end_date__
-        input_sequence = self.__default_tfexample_input_sequence__
+        context_sequent_length = self.__default_sequent_length__
+        context_token = self.__default_token__
+        context_start = self.__input_sequence_start_date__
+        context_end = self.__input_sequence_end_date__
+        input_sequence = self.__example_input_sequence__
 
         #build ex
         ex = tf.train.SequenceExample()
@@ -401,18 +412,18 @@ class InputData():
         return ex
     #
     def _decode_prediction_example(self, ex_serial):
-        context_features = {self.__default_tfcontext_token__:
+        context_features = {self.__default_token__:
                                 tf.FixedLenFeature([], dtype=tf.string),
-                            self.__default_tfcontext_sequent_length__:
+                            self.__default_sequent_length__:
                                 tf.FixedLenFeature([], dtype=tf.int64),
-                            self.__prediction_sequence_end_date__:
+                            self.__input_sequence_end_date__:
                                 tf.FixedLenFeature([], dtype=tf.string),
-                            self.__prediction_sequence_start_date__:
+                            self.__input_sequence_start_date__:
                                 tf.FixedLenFeature([], dtype=tf.string)
                            }
-        sequence_features = {self.__default_tfexample_input_sequence__:
+        sequence_features = {self.__example_input_sequence__:
                              tf.FixedLenSequenceFeature([], dtype=tf.float32)
-                             }
+                            }
         context_parsed, sequence_parsed = tf.parse_single_sequence_example(
             serialized=ex_serial,
             context_features=context_features,
@@ -420,11 +431,64 @@ class InputData():
             )
         return context_parsed, sequence_parsed
     #
-    def _encode_train_example(self, lines, token):
-        raise Exception("the method _encode_train_example is not impletemented!")
+    def _encode_train_example(self, example_lines, token):
+        #prepare content
+        #get the two sequence
+        input_sequence = example_lines[self.__example_input_sequence__]
+        target_sequence = example_lines[self.__example_target_sequence__]
+        #remove data of exchange date and get them flatten
+        _inputs = [line[1:] for line in input_sequence]
+        _targets = [line[1:] for line in target_sequence]
+        inputs = np.array(_inputs).flatten()
+        targets = np.array(_targets).flatten()
+        #basic data
+        length = len(input_sequence)
+        input_start = bytes(input_sequence[0][0], 'utf-8')
+        input_end = bytes(input_sequence[length-1][0], 'utf-8')
+        target_start = bytes(target_sequence[0][0], 'utf-8')
+        target_end = bytes(target_sequence[length - 1][0], 'utf-8')
+        token_bytes = bytes(token, 'utf-8')
+        #begin to encode
+        ex = tf.train.SequenceExample()
+        ex.context.feature[
+            self.__default_sequent_length__].int64_list.value.append(length)
+        ex.context.feature[
+            self.__input_sequence_start_date__].bytes_list.value.append(input_start)
+        ex.context.feature[
+            self.__input_sequence_end_date__].bytes_list.value.append(input_end)
+        ex.context.feature[
+            self.__target_sequence_start_date__].bytes_list.value.append(target_start)
+        ex.context.feature[
+            self.__target_sequence_end_date__].bytes_list.value.append(target_end)
+        ex.context.feature[
+            self.__default_token__].bytes_list.value.append(token_bytes)
+        fl_inputs = ex.feature_lists.feature_list[self.__example_input_sequence__]
+        fl_targets = ex.feature_lists.feature_list[self.__example_target_sequence__]
+        for _input, _target in zip(inputs, targets):
+            fl_inputs.feature.add().float_list.value.append(_input)
+            fl_targets.feature.add().float_list.value.append(_target)
+        return ex
     #
     def _decode_train_example(self, ex_serial):
-        raise Exception("the method _decode_train_example is not impletemented!")
+        context_features = {
+            self.__default_sequent_length__: tf.FixedLenFeature([], dtype=tf.int64),
+            self.__input_sequence_start_date__: tf.FixedLenFeature([], dtype=tf.string),
+            self.__input_sequence_end_date__: tf.FixedLenFeature([], dtype=tf.string),
+            self.__target_sequence_start_date__: tf.FixedLenFeature([], dtype=tf.string),
+            self.__target_sequence_end_date__: tf.FixedLenFeature([], dtype=tf.string),
+            self.__default_token__: tf.FixedLenFeature([], dtype=tf.string)
+        }
+        sequence_features = {
+            self.__example_input_sequence__: tf.FixedLenSequenceFeature([], dtype=tf.float32),
+            self.__example_target_sequence__: tf.FixedLenSequenceFeature([], dtype=tf.float32)
+        }
+        context_parsed, sequence_parsed = tf.parse_single_sequence_example(
+            serialized=ex_serial,
+            context_features=context_features,
+            sequence_features=sequence_features
+        )
+        return context_parsed, sequence_parsed
+        
     #
     def __create_filename__(self, files):
         ''' The form of name of result data are "prediction000.tfrecord"
@@ -455,7 +519,7 @@ class InputData():
         filelist = [x.name for x in _filelist]
         return filelist
     #
-    def _raw_data_check(self, filename, lines):
+    def _raw_data_check(self, filename):
         # This method's resposibilities are to make sure that number of lines is enough
         # and that the needed string can be converted to number
         # If it is not comptible, this method log it
@@ -465,6 +529,7 @@ class InputData():
                 lines: lines of data. It is a list
         '''
         _is_comptible = True
+        lines = []
         with self.__fsys_data__.open(self.__default_raw_data_dir__ + filename,
                                      mode='r') as raw_file:
 
@@ -480,8 +545,8 @@ class InputData():
                 except ValueError:
                     _is_comptible = False
                     #log
-                    self.__log_data_not_comptible__(filename,
-                                                    rnn_model_exception.DataNotComptible.has_non_float)
+                    self.__log_data_not_comptible__(
+                        filename, rnn_model_exception.DataNotComptible.has_non_float)
                     return _is_comptible
         length = len(lines)
         if length < self.__max_step__:
@@ -489,7 +554,7 @@ class InputData():
             #log
             self.__log_data_not_comptible__(filename,
                                             rnn_model_exception.DataNotComptible.is_not_enough)
-        return _is_comptible
+        return _is_comptible, lines
     #
     def __log_data_not_comptible__(self, filename, error_type):
         def __createlogerrorfile__(path):
