@@ -204,12 +204,10 @@ class stat_feature():
     '''store the stat feature of price and volumn respectively
     '''
     def __init__(self):
-        self.num_price = 0
-        self.mean_price = 0
-        self.std_price = 0
-        self.num_volumn = 0
-        self.mean_volumn = 0
-        self.std_volumn = 0
+        self.num = 0
+        self.mean = 0
+        self.std = 0
+        
 #
 class example_type():
     train = 0
@@ -254,7 +252,10 @@ class InputData():
         if self.__fsys_data__.exists(self.__default_result_data_dir__) is not True:
             self.__fsys_data__.makedir(self.__default_result_data_dir__)
         #statistical feature
-        self._stat_features = stat_feature()
+        self.__stat_price__ = 'price'
+        self.__stat_volumn__ = 'volumn'
+        self._stat_features = {self.__stat_price__: stat_feature(),
+                               self.__stat_volumn__: stat_feature()}
     #
     def __setup_result_dir__(self):
         def __createneededfiles__(match):
@@ -376,7 +377,57 @@ class InputData():
             '''
     #
     def _calculate_statistical_feature(self, example):
-        raise Exception("the method _calculate_statistical_feature is not impletmented!")
+        def _combinate_stat(stat1, stat2):
+            ''' This function will calculate the statistic value 
+                when the number of data, mean and std of two batch of data are available.
+                The equations are:
+                e = a1*mean1 + a2*mean2
+                sigma^2 = a1*(sigma1^2 + e1^2) + a2*(sigma2^2 + e2^2) - e*e
+                a1 = n1 / (n1 + n2)
+                a2 = n2 / (n1 + n2)
+            '''
+            n1 = stat1.num
+            n2 = stat2.num
+            a1 = n1 / (n1 + n2)
+            a2 = n2 / (n1 + n2)
+            e = a1 * stat1.mean + a2 * stat2.mean
+            sigma_square = a1*(np.square(stat1.std) + stat1.mean * stat1.mean) 
+            sigma_square += a2*(np.square(stat2.std) + stat2.mean * stat2.mean) - e * e
+
+            stat = stat_feature()
+            stat.num = n1 + n2
+            stat.mean = e
+            stat.std = np.sqrt(sigma_square)
+            return stat
+
+        input_sequence = example[self.__example_input_sequence__]
+        target_sequence = example[self.__example_target_sequence__]
+        #remove the data of exchange date
+        input_lines = [line[1: self.__feature_size__ + 1 ] for line in input_sequence]
+        target_lines = [line[1:self.__feature_size__ + 1] for line in target_sequence]
+        
+        lines = np.array(input_lines + target_lines)
+        
+        stat_price = stat_feature()
+        stat_volumn = stat_feature()
+        
+        stat_price.num = len(input_lines + target_lines) * (self.__feature_size__ - 1)
+        price_lines = lines[0:, 0:self.__feature_size__ - 1]
+        stat_price.mean = np.mean(price_lines)
+        stat_price.std = np.std(price_lines)
+        
+        volumn_lines = lines[0:, self.__feature_size__ - 1 :]
+        stat_volumn.num = len(input_lines + target_lines)
+        stat_volumn.mean = np.mean(volumn_lines)
+        stat_volumn.std = np.std(volumn_lines)
+        
+        #With the existing stat combination
+        combinate_stat_price = _combinate_stat(stat_price, self._stat_features[self.__stat_price__])
+        combinate_stat_volumn = _combinate_stat(stat_volumn, self._stat_features[self.__stat_volumn__])
+        self._stat_features[self.__stat_price__] = combinate_stat_price
+        self._stat_features[self.__stat_volumn__] = combinate_stat_volumn
+
+        
     def _divide_line(self, raw_data_lines):
         ''' this method will divide the lines of raw data to line of examples
             args:

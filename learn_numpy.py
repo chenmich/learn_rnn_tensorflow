@@ -17,5 +17,7 @@ volumn_lines = lines_array[0:, 4:]
 
 another_lines_array = np.arange(10).reshape(2,5)
 
-three_lines = np.sta
-print(three_lines)
+
+shape = np.shape(another_lines_array)
+print(shape)
+print(shape[0])

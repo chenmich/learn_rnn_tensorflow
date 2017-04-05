@@ -31,3 +31,4 @@ expect_sigma_square = np.square(np.std(valid_data_batch1 + valid_data_batch2))
 
 print ("e", e, expect_e)
 print("sigma_square", sigma_square, expect_sigma_square)
+print('sigma', np.sqrt(sigma_square))

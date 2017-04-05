@@ -355,65 +355,50 @@ class test_make_example_for_trains(tf.test.TestCase):
         # in the method calculate_statistical_feature 
         
         def Assertion(expect, real):
-            self.assertEqual(expect.num_price, real.num_price)
-            self.assertEqual(expect.mean_price, real.mean_price)
-            self.assertEqual(expect.std_price, real.std_price)
-            self.assertEqual(expect.num_volumn, real.num_volumn)
-            self.assertEqual(expect.mean_volumn, real.mean_volumn)
-            self.assertEqual(expect.std_volumn, real.std_volumn)
-        inputdata = ldp.InputData(get_fsys(), MAX_STEP, FEATURE_SIZE)
+            self.assertEqual(expect.num, real.num)
+            self.assertAllClose(expect.mean, real.mean)
+            self.assertAllClose(expect.std, real.std)
+
+        def get_example(lines):
+            _lines = [[str(datetime.date.today())] + line for line in lines.tolist()]       
+            _lines.reverse()
+            example = {'input_sequence': _lines[0:MAX_STEP],
+                       'target_sequence': _lines[MAX_STEP:]}
+            return example
+        def get_stat(lines):
+            shape = np.shape(lines)
+            stat = ldp.stat_feature()
+            stat.num = shape[0]*shape[1]
+            stat.mean = np.mean(lines)
+            stat.std = np.std(lines)
+            return stat
+        
+        
         #prepare data
-        max_step = inputdata.__max_step__
-        feature_size = inputdata.__feature_size__
         lines = np.random.normal(size=2*MAX_STEP*
                                                 FEATURE_SIZE).reshape(2*MAX_STEP, FEATURE_SIZE)
-        _lines = [[str(datetime.date.today())] + line for line in lines.tolist()]
-        _lines.reverse()        
-        example = {inputdata.__example_input_sequence__: _lines[0:max_step],
-                   inputdata.__example_target_sequence__: _lines[max_step:]}
-        #another example
         anotherLines = np.random.normal(size=2*MAX_STEP*
                                                        FEATURE_SIZE).reshape(2*MAX_STEP, FEATURE_SIZE)
-        _anotherLines = [[str(datetime.date.today())] + line for line in anotherLines.tolist()]
-        _anotherLines.reverse()
-        anotherExample = {inputdata.__example_input_sequence__: _anotherLines[0:max_step],
-                          inputdata.__example_target_sequence__: _anotherLines[max_step:]}
         
-        #calculate the expect content
-        price_lines = lines[0:, 1:5]
-        volumn_lines = lines[0:, 5:]
+        example = get_example(lines)
+        anotherExample = get_example(anotherLines)
+        stat_price = get_stat(lines[0:, 0:FEATURE_SIZE - 1])
+        stat_volumn = get_stat(lines[0:, FEATURE_SIZE - 1:])
         
-        expect_stat_features = ldp.stat_feature()
-        expect_stat_features.num_price = (feature_size - 1) * 2 * max_step
-        expect_stat_features.mean_price = np.mean(price_lines)
-        expect_stat_features.std_price = np.std(price_lines)
-        expect_stat_features.num_volumn = 2 * max_step
-        expect_stat_features.mean_volumn = np.mean(volumn_lines)
-        expect_stat_features.std_volumn = np.std(volumn_lines)
-
-        anotherExpect_stat_features = ldp.stat_feature()
-
-        another_price_lines = anotherLines[0:, 1:5]
-        another_volumn_lines = anotherLines[0:, 5:]
-        
-        all_price_line = np.array(price_lines.tolist() + another_price_lines.tolist())
-        all_volumn_line = np.array(volumn_lines.tolist() + another_volumn_lines.tolist())
-
-        anotherExpect_stat_features.num_price = expect_stat_features.num_price + (feature_size - 1)* 2 * max_step
-        anotherExpect_stat_features.num_volumn = expect_stat_features.num_volumn + 2 * max_step
-        anotherExpect_stat_features.mean_price =  np.mean(all_price_line)
-        anotherExpect_stat_features.std_price =  np.std(all_price_line)
-        anotherExpect_stat_features.mean_volumn = np.mean(all_volumn_line)
-        anotherExpect_stat_features.std_volumn = np.std(all_volumn_line)
+        combinat_lines = np.array(lines.tolist() + anotherLines.tolist())
+        combinat_stat_price = get_stat(combinat_lines[0:, 0: FEATURE_SIZE - 1])
+        combinat_stat_volumn = get_stat(combinat_lines[0:, FEATURE_SIZE - 1:])
 
         #exercise
+        inputdata = ldp.InputData(get_fsys(), MAX_STEP, FEATURE_SIZE)
         inputdata._calculate_statistical_feature(example)
         #valid        
-        Assertion(expect_stat_features, inputdata._stat_features)
-        #another exercise
+        Assertion(stat_price, inputdata._stat_features[inputdata.__stat_price__])
+        Assertion(stat_volumn, inputdata._stat_features[inputdata.__stat_volumn__])
+        #another exercise and valid
         inputdata._calculate_statistical_feature(anotherExample)
-        Assertion(anotherExpect_stat_features, inputdata._stat_features)
-
+        Assertion(combinat_stat_price, inputdata._stat_features[inputdata.__stat_price__])
+        Assertion(combinat_stat_volumn, inputdata._stat_features[inputdata.__stat_volumn__])
     #
 
 if __name__ == "__main__":
