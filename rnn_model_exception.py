@@ -23,4 +23,6 @@ class DataNotComptible(RNNModelException):
     is_not_enough = 2
 class NoRawDataFileFound(RNNModelException):
     pass
+class ExampleTypeUnknown(RNNModelException):
+    pass
 

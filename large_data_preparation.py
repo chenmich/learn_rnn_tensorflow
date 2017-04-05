@@ -18,6 +18,7 @@ import argparse
 import csv
 import json
 from datetime import datetime
+import tempfile
 
 import numpy as np
 import tensorflow as tf
@@ -213,6 +214,7 @@ class example_type():
     train = 0
     valid = 1
     test = 2
+    prediction = 3
 #refactor to oriented-object
 class InputData():
     ''' This class is for preparation of model data
@@ -226,7 +228,7 @@ class InputData():
         self.__bits_of_file_number__ = 5
         #file system
         self.__default_raw_data_dir__ = 'raw_data/'
-        self.__default_result_data_dir__ = 'result_data/' + 'dataset' + str(max_step) + '/'
+        self.__default_result_data_dir__ = 'result_data/' + 'dataset' + str(max_step) + '_step' + '/'
         self.__default_log_file__ = 'logerror*.txt'
         self.__fsys_data__ = fsys_data
         #tf.sequenceExample
@@ -369,12 +371,17 @@ class InputData():
             _example_type = _make_decision_type()
             if _example_type == example_type.train:
                 self._calculate_statistical_feature(example)
-            ''' At this place, the encoded example must be stored in tfrecord files
-            '''
-            ''' At this place, it must be determined
-                that an example is used for training, testing or verification.
-                Such as for training, to calculate its statistical characteristic values
-            '''
+            self._save_examples(ex.SerializeToString(), _example_type)            
+    #
+    def _save_examples(self, ex_serial, ex_type):
+        if ex_type != example_type.train or
+           ex_type != example_type.test or
+           ex_type != example_type.valid or
+           ex_type != example_type.prediction:
+           raise rnn_model_exception.ExampleTypeUnknown(
+                '''The type of example may be:train,test, valid and prediction! 
+                   Please look at class example_type for details''')
+        raise Exception('The method _save_examples is not impletmented!')
     #
     def _calculate_statistical_feature(self, example):
         def _combinate_stat(stat1, stat2):
@@ -405,14 +412,15 @@ class InputData():
         #remove the data of exchange date
         input_lines = [line[1: self.__feature_size__ + 1 ] for line in input_sequence]
         target_lines = [line[1:self.__feature_size__ + 1] for line in target_sequence]
-        
+        #join the two sequence for calculate stat 
         lines = np.array(input_lines + target_lines)
         
         stat_price = stat_feature()
         stat_volumn = stat_feature()
         
-        stat_price.num = len(input_lines + target_lines) * (self.__feature_size__ - 1)
+        
         price_lines = lines[0:, 0:self.__feature_size__ - 1]
+        stat_price.num = len(input_lines + target_lines) * (self.__feature_size__ - 1)
         stat_price.mean = np.mean(price_lines)
         stat_price.std = np.std(price_lines)
         
@@ -426,8 +434,7 @@ class InputData():
         combinate_stat_volumn = _combinate_stat(stat_volumn, self._stat_features[self.__stat_volumn__])
         self._stat_features[self.__stat_price__] = combinate_stat_price
         self._stat_features[self.__stat_volumn__] = combinate_stat_volumn
-
-        
+    # 
     def _divide_line(self, raw_data_lines):
         ''' this method will divide the lines of raw data to line of examples
             args:
@@ -657,7 +664,6 @@ class InputData():
             writer = csv.writer(logfile)
             writer.writerow([filename, error_type])
     #
-
 # main control
 def main(args):
     ''' main control flow

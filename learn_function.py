@@ -6,3 +6,4 @@ def foo(x):
        x[no] = float(x[0])
 foo(y)
 print(y)
+

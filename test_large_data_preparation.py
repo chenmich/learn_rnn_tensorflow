@@ -400,6 +400,9 @@ class test_make_example_for_trains(tf.test.TestCase):
         Assertion(combinat_stat_price, inputdata._stat_features[inputdata.__stat_price__])
         Assertion(combinat_stat_volumn, inputdata._stat_features[inputdata.__stat_volumn__])
     #
-
+#
+class test_save_examples(tf.test.TestCase):
+    pass
+#
 if __name__ == "__main__":
     tf.test.main()
