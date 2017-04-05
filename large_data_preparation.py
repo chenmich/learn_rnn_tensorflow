@@ -200,10 +200,21 @@ def _convert_data_to_example(path, match):
     price_mean, price_std, volumn_mean, volumn_std = _get_statistical_data(_tmp)
     _save_examples(_examples)
 #
+class stat_feature():
+    '''store the stat feature of price and volumn respectively
+    '''
+    def __init__(self):
+        self.num_price = 0
+        self.mean_price = 0
+        self.std_price = 0
+        self.num_volumn = 0
+        self.mean_volumn = 0
+        self.std_volumn = 0
+#
 class example_type():
-            train = 0
-            valid = 1
-            test = 2
+    train = 0
+    valid = 1
+    test = 2
 #refactor to oriented-object
 class InputData():
     ''' This class is for preparation of model data
@@ -242,7 +253,8 @@ class InputData():
             self.__raw_file_wildcard__ = raw_file_wildcard
         if self.__fsys_data__.exists(self.__default_result_data_dir__) is not True:
             self.__fsys_data__.makedir(self.__default_result_data_dir__)
-
+        #statistical feature
+        self._stat_features = stat_feature()
     #
     def __setup_result_dir__(self):
         def __createneededfiles__(match):
@@ -355,7 +367,7 @@ class InputData():
             ex = self._encode_train_example(example, token)
             _example_type = _make_decision_type()
             if _example_type == example_type.train:
-                self.calculate_statistical_feature(example)
+                self._calculate_statistical_feature(example)
             ''' At this place, the encoded example must be stored in tfrecord files
             '''
             ''' At this place, it must be determined
@@ -363,6 +375,8 @@ class InputData():
                 Such as for training, to calculate its statistical characteristic values
             '''
     #
+    def _calculate_statistical_feature(self, example):
+        raise Exception("the method _calculate_statistical_feature is not impletmented!")
     def _divide_line(self, raw_data_lines):
         ''' this method will divide the lines of raw data to line of examples
             args:
