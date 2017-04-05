@@ -199,6 +199,11 @@ def _convert_data_to_example(path, match):
 
     price_mean, price_std, volumn_mean, volumn_std = _get_statistical_data(_tmp)
     _save_examples(_examples)
+#
+class example_type():
+            train = 0
+            valid = 1
+            test = 2
 #refactor to oriented-object
 class InputData():
     ''' This class is for preparation of model data
@@ -318,6 +323,7 @@ class InputData():
         '''
         ex = self._encode_prediction_example(lines, token)
 
+    
     #
     def _make_examples_for_trains(self, lines, token):
         ''' The examples for train are consist of the three parts.
@@ -328,13 +334,31 @@ class InputData():
             args:
                 lines: all the raw data in list
         '''
+        def _make_decision_type(seed=None):
+            _seed = None
+            if seed is None:
+                _seed = datetime.now().microsecond()
+            else:
+                _seed = seed
+            r_state = np.random.RandomState(_seed)
+            _decision = r_state.random_sample()
+            if _decision >= 0.0 and _decision < 0.6:#train
+                return example_type.train
+            if _decision >= 0.6 and _decision < 0.8:#valid
+                return example_type.valid
+            if _decision <= 1.0:#test
+                return example_type.test
+
         #divide the lines for example
         examples = self._divide_line(lines)
         for example in examples:
             ex = self._encode_train_example(example, token)
+            _example_type = _make_decision_type()
+            if _example_type == example_type.train:
+                self.calculate_statistical_feature(example)
             ''' At this place, the encoded example must be stored in tfrecord files
             '''
-            ''' At this place, Here, it must be determined
+            ''' At this place, it must be determined
                 that an example is used for training, testing or verification.
                 Such as for training, to calculate its statistical characteristic values
             '''
