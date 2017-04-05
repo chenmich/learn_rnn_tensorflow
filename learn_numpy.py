@@ -10,6 +10,14 @@ from datetime import time
 
 _lines = [[1, 2, 3, 4, 110],[22, 55, 44, 88, 99]]
 
-lines = [[str(datetime.date.today())] + _line for _line in _lines]
-line = [line[1:] for line in lines]
-print(lines)
+lines_array = np.array(_lines)
+price_lines = lines_array[0:, 0:3]
+volumn_lines = lines_array[0:, 4:]
+
+
+another_lines_array = np.arange(10).reshape(2,5)
+
+
+shape = np.shape(another_lines_array)
+print(shape)
+print(shape[0])

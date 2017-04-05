@@ -347,6 +347,62 @@ class test_make_example_for_trains(tf.test.TestCase):
         #the earlier of data the less effect for future price
         self.assertEqual(MAX_STEP // 2, len(example_lines[num_example - 1]['input_sequence']))
         self.assertEqual(MAX_STEP // 2, len(example_lines[num_example - 1]['target_sequence']))
+    #
+    def test_calculate_statistical_feature(self):
+        # the already available stat feature of examples for train will be stored 
+        # in the field of InputData
+        # If there is any added, the stat feature will be calculated by the function
+        # in the method calculate_statistical_feature 
+        
+        def Assertion(expect, real):
+            self.assertEqual(expect.num, real.num)
+            self.assertAllClose(expect.mean, real.mean)
+            self.assertAllClose(expect.std, real.std)
 
+        def get_example(lines):
+            _lines = [[str(datetime.date.today())] + line for line in lines.tolist()]       
+            _lines.reverse()
+            example = {'input_sequence': _lines[0:MAX_STEP],
+                       'target_sequence': _lines[MAX_STEP:]}
+            return example
+        def get_stat(lines):
+            shape = np.shape(lines)
+            stat = ldp.stat_feature()
+            stat.num = shape[0]*shape[1]
+            stat.mean = np.mean(lines)
+            stat.std = np.std(lines)
+            return stat
+        
+        
+        #prepare data
+        lines = np.random.normal(size=2*MAX_STEP*
+                                                FEATURE_SIZE).reshape(2*MAX_STEP, FEATURE_SIZE)
+        anotherLines = np.random.normal(size=2*MAX_STEP*
+                                                       FEATURE_SIZE).reshape(2*MAX_STEP, FEATURE_SIZE)
+        
+        example = get_example(lines)
+        anotherExample = get_example(anotherLines)
+        stat_price = get_stat(lines[0:, 0:FEATURE_SIZE - 1])
+        stat_volumn = get_stat(lines[0:, FEATURE_SIZE - 1:])
+        
+        combinat_lines = np.array(lines.tolist() + anotherLines.tolist())
+        combinat_stat_price = get_stat(combinat_lines[0:, 0: FEATURE_SIZE - 1])
+        combinat_stat_volumn = get_stat(combinat_lines[0:, FEATURE_SIZE - 1:])
+
+        #exercise
+        inputdata = ldp.InputData(get_fsys(), MAX_STEP, FEATURE_SIZE)
+        inputdata._calculate_statistical_feature(example)
+        #valid        
+        Assertion(stat_price, inputdata._stat_features[inputdata.__stat_price__])
+        Assertion(stat_volumn, inputdata._stat_features[inputdata.__stat_volumn__])
+        #another exercise and valid
+        inputdata._calculate_statistical_feature(anotherExample)
+        Assertion(combinat_stat_price, inputdata._stat_features[inputdata.__stat_price__])
+        Assertion(combinat_stat_volumn, inputdata._stat_features[inputdata.__stat_volumn__])
+    #
+#
+class test_save_examples(tf.test.TestCase):
+    pass
+#
 if __name__ == "__main__":
     tf.test.main()

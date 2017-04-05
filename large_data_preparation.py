@@ -18,6 +18,7 @@ import argparse
 import csv
 import json
 from datetime import datetime
+import tempfile
 
 import numpy as np
 import tensorflow as tf
@@ -200,10 +201,20 @@ def _convert_data_to_example(path, match):
     price_mean, price_std, volumn_mean, volumn_std = _get_statistical_data(_tmp)
     _save_examples(_examples)
 #
+class stat_feature():
+    '''store the stat feature of price and volumn respectively
+    '''
+    def __init__(self):
+        self.num = 0
+        self.mean = 0
+        self.std = 0
+        
+#
 class example_type():
-            train = 0
-            valid = 1
-            test = 2
+    train = 0
+    valid = 1
+    test = 2
+    prediction = 3
 #refactor to oriented-object
 class InputData():
     ''' This class is for preparation of model data
@@ -217,7 +228,7 @@ class InputData():
         self.__bits_of_file_number__ = 5
         #file system
         self.__default_raw_data_dir__ = 'raw_data/'
-        self.__default_result_data_dir__ = 'result_data/' + 'dataset' + str(max_step) + '/'
+        self.__default_result_data_dir__ = 'result_data/' + 'dataset' + str(max_step) + '_step' + '/'
         self.__default_log_file__ = 'logerror*.txt'
         self.__fsys_data__ = fsys_data
         #tf.sequenceExample
@@ -242,7 +253,11 @@ class InputData():
             self.__raw_file_wildcard__ = raw_file_wildcard
         if self.__fsys_data__.exists(self.__default_result_data_dir__) is not True:
             self.__fsys_data__.makedir(self.__default_result_data_dir__)
-
+        #statistical feature
+        self.__stat_price__ = 'price'
+        self.__stat_volumn__ = 'volumn'
+        self._stat_features = {self.__stat_price__: stat_feature(),
+                               self.__stat_volumn__: stat_feature()}
     #
     def __setup_result_dir__(self):
         def __createneededfiles__(match):
@@ -355,14 +370,71 @@ class InputData():
             ex = self._encode_train_example(example, token)
             _example_type = _make_decision_type()
             if _example_type == example_type.train:
-                self.calculate_statistical_feature(example)
-            ''' At this place, the encoded example must be stored in tfrecord files
-            '''
-            ''' At this place, it must be determined
-                that an example is used for training, testing or verification.
-                Such as for training, to calculate its statistical characteristic values
-            '''
+                self._calculate_statistical_feature(example)
+            self._save_examples(ex.SerializeToString(), _example_type)            
     #
+    def _save_examples(self, ex_serial, ex_type):
+        if ex_type != example_type.train or
+           ex_type != example_type.test or
+           ex_type != example_type.valid or
+           ex_type != example_type.prediction:
+           raise rnn_model_exception.ExampleTypeUnknown(
+                '''The type of example may be:train,test, valid and prediction! 
+                   Please look at class example_type for details''')
+        raise Exception('The method _save_examples is not impletmented!')
+    #
+    def _calculate_statistical_feature(self, example):
+        def _combinate_stat(stat1, stat2):
+            ''' This function will calculate the statistic value 
+                when the number of data, mean and std of two batch of data are available.
+                The equations are:
+                e = a1*mean1 + a2*mean2
+                sigma^2 = a1*(sigma1^2 + e1^2) + a2*(sigma2^2 + e2^2) - e*e
+                a1 = n1 / (n1 + n2)
+                a2 = n2 / (n1 + n2)
+            '''
+            n1 = stat1.num
+            n2 = stat2.num
+            a1 = n1 / (n1 + n2)
+            a2 = n2 / (n1 + n2)
+            e = a1 * stat1.mean + a2 * stat2.mean
+            sigma_square = a1*(np.square(stat1.std) + stat1.mean * stat1.mean) 
+            sigma_square += a2*(np.square(stat2.std) + stat2.mean * stat2.mean) - e * e
+
+            stat = stat_feature()
+            stat.num = n1 + n2
+            stat.mean = e
+            stat.std = np.sqrt(sigma_square)
+            return stat
+
+        input_sequence = example[self.__example_input_sequence__]
+        target_sequence = example[self.__example_target_sequence__]
+        #remove the data of exchange date
+        input_lines = [line[1: self.__feature_size__ + 1 ] for line in input_sequence]
+        target_lines = [line[1:self.__feature_size__ + 1] for line in target_sequence]
+        #join the two sequence for calculate stat 
+        lines = np.array(input_lines + target_lines)
+        
+        stat_price = stat_feature()
+        stat_volumn = stat_feature()
+        
+        
+        price_lines = lines[0:, 0:self.__feature_size__ - 1]
+        stat_price.num = len(input_lines + target_lines) * (self.__feature_size__ - 1)
+        stat_price.mean = np.mean(price_lines)
+        stat_price.std = np.std(price_lines)
+        
+        volumn_lines = lines[0:, self.__feature_size__ - 1 :]
+        stat_volumn.num = len(input_lines + target_lines)
+        stat_volumn.mean = np.mean(volumn_lines)
+        stat_volumn.std = np.std(volumn_lines)
+        
+        #With the existing stat combination
+        combinate_stat_price = _combinate_stat(stat_price, self._stat_features[self.__stat_price__])
+        combinate_stat_volumn = _combinate_stat(stat_volumn, self._stat_features[self.__stat_volumn__])
+        self._stat_features[self.__stat_price__] = combinate_stat_price
+        self._stat_features[self.__stat_volumn__] = combinate_stat_volumn
+    # 
     def _divide_line(self, raw_data_lines):
         ''' this method will divide the lines of raw data to line of examples
             args:
@@ -592,7 +664,6 @@ class InputData():
             writer = csv.writer(logfile)
             writer.writerow([filename, error_type])
     #
-
 # main control
 def main(args):
     ''' main control flow
