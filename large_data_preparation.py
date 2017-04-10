@@ -228,14 +228,15 @@ class InputData():
         self.__bits_of_file_number__ = 5
         #file system
         self.__default_raw_data_dir__ = 'raw_data/'
-        self.__default_result_data_dir__ = 'result_data/' + 'dataset' + str(max_step) + '_step' + '/'
+        self.__default_result_data_dir__ = 'result_data/' + 'dataset' + (
+            str(max_step) + '_step' + '/')
         self.__default_log_file__ = 'logerror*.txt'
         self.__fsys_data__ = fsys_data
         #tf.sequenceExample
         self.__example_input_sequence__ = 'input_sequence'
         self.__example_target_sequence__ = 'target_sequence'
-        self.__default_token__ = 'token'
-        self.__default_sequent_length__ = 'length'
+        self.__token__ = 'token'
+        self.__sequent_length__ = 'length'
         self.__input_sequence_start_date__ = 'input_start'
         self.__input_sequence_end_date__ = 'input_end'
         self.__target_sequence_start_date__ = 'target_start'
@@ -258,34 +259,15 @@ class InputData():
         self.__stat_volumn__ = 'volumn'
         self._stat_features = {self.__stat_price__: stat_feature(),
                                self.__stat_volumn__: stat_feature()}
+        self.__setup_result_dir__()
     #
     def __setup_result_dir__(self):
-        def __createneededfiles__(match):
-            fsys = self.__fsys_data__
-            pure_path = self.__default_result_data_dir__
-            filename = ''
-            file_name = match.split('*')
-            if match == self.__default_log_file__:
-                filename = file_name[0] + file_name[1]
-                if fsys.exists(pure_path + filename) is not True:
-                    with fsys.open(pure_path + filename, mode="w") as logerror:
-                        writer = csv.writer(logerror)
-                        writer.writerow(['file_name', 'error_type'])
-            else:
-                filename = file_name[0] + self.__bits_of_file_number__*'0' + file_name[1]
-                if fsys.exists(pure_path + filename) is not True:
-                    fsys.create(pure_path + filename)
-
         fsys = self.__fsys_data__
         pure_path = self.__default_result_data_dir__
+        if fsys.exists('/result_data/') is not True:
+            fsys.makedir('/result_data/')
         if fsys.exists(pure_path) is not True:
             fsys.makedir(pure_path)
-        __createneededfiles__(self.__default_log_file__)
-        __createneededfiles__(self.__default_prediction_tfrecordfile__)
-        __createneededfiles__(self.__default_test_tfrecordfile__)
-        __createneededfiles__(self.__default_train_tfrecordfile__)
-        __createneededfiles__(self.__default_valid_tfrecordfile__)
-
     #
     def make_examples(self):
         ''' This method will divided raw to four parts
@@ -338,7 +320,6 @@ class InputData():
         '''
         ex = self._encode_prediction_example(lines, token)
 
-    
     #
     def _make_examples_for_trains(self, lines, token):
         ''' The examples for train are consist of the three parts.
@@ -371,21 +352,21 @@ class InputData():
             _example_type = _make_decision_type()
             if _example_type == example_type.train:
                 self._calculate_statistical_feature(example)
-            self._save_examples(ex.SerializeToString(), _example_type)            
+            self._save_examples(ex.SerializeToString(), _example_type)
     #
     def _save_examples(self, ex_serial, ex_type):
-        if ex_type != example_type.train or
-           ex_type != example_type.test or
-           ex_type != example_type.valid or
-           ex_type != example_type.prediction:
-           raise rnn_model_exception.ExampleTypeUnknown(
-                '''The type of example may be:train,test, valid and prediction! 
+        if (ex_type != example_type.train) or (
+                ex_type != example_type.test) or (
+                    ex_type != example_type.valid) or (
+                        ex_type != example_type.prediction):
+            raise rnn_model_exception.ExampleTypeUnknown(
+                '''The type of example may be:train,test, valid and prediction!
                    Please look at class example_type for details''')
         raise Exception('The method _save_examples is not impletmented!')
     #
     def _calculate_statistical_feature(self, example):
         def _combinate_stat(stat1, stat2):
-            ''' This function will calculate the statistic value 
+            ''' This function will calculate the statistic value
                 when the number of data, mean and std of two batch of data are available.
                 The equations are:
                 e = a1*mean1 + a2*mean2
@@ -398,7 +379,7 @@ class InputData():
             a1 = n1 / (n1 + n2)
             a2 = n2 / (n1 + n2)
             e = a1 * stat1.mean + a2 * stat2.mean
-            sigma_square = a1*(np.square(stat1.std) + stat1.mean * stat1.mean) 
+            sigma_square = a1*(np.square(stat1.std) + stat1.mean * stat1.mean)
             sigma_square += a2*(np.square(stat2.std) + stat2.mean * stat2.mean) - e * e
 
             stat = stat_feature()
@@ -412,29 +393,29 @@ class InputData():
         #remove the data of exchange date
         input_lines = [line[1: self.__feature_size__ + 1 ] for line in input_sequence]
         target_lines = [line[1:self.__feature_size__ + 1] for line in target_sequence]
-        #join the two sequence for calculate stat 
+        #join the two sequence for calculate stat
         lines = np.array(input_lines + target_lines)
-        
+
         stat_price = stat_feature()
         stat_volumn = stat_feature()
-        
-        
+
+
         price_lines = lines[0:, 0:self.__feature_size__ - 1]
         stat_price.num = len(input_lines + target_lines) * (self.__feature_size__ - 1)
         stat_price.mean = np.mean(price_lines)
         stat_price.std = np.std(price_lines)
-        
+
         volumn_lines = lines[0:, self.__feature_size__ - 1 :]
         stat_volumn.num = len(input_lines + target_lines)
         stat_volumn.mean = np.mean(volumn_lines)
         stat_volumn.std = np.std(volumn_lines)
-        
+
         #With the existing stat combination
         combinate_stat_price = _combinate_stat(stat_price, self._stat_features[self.__stat_price__])
         combinate_stat_volumn = _combinate_stat(stat_volumn, self._stat_features[self.__stat_volumn__])
         self._stat_features[self.__stat_price__] = combinate_stat_price
         self._stat_features[self.__stat_volumn__] = combinate_stat_volumn
-    # 
+    #
     def _divide_line(self, raw_data_lines):
         ''' this method will divide the lines of raw data to line of examples
             args:
@@ -490,8 +471,8 @@ class InputData():
         sequence = sequence.flatten().tolist()
 
         #prepared for ex
-        context_sequent_length = self.__default_sequent_length__
-        context_token = self.__default_token__
+        context_sequent_length = self.__sequent_length__
+        context_token = self.__token__
         context_start = self.__input_sequence_start_date__
         context_end = self.__input_sequence_end_date__
         input_sequence = self.__example_input_sequence__
@@ -508,9 +489,9 @@ class InputData():
         return ex
     #
     def _decode_prediction_example(self, ex_serial):
-        context_features = {self.__default_token__:
+        context_features = {self.__token__:
                                 tf.FixedLenFeature([], dtype=tf.string),
-                            self.__default_sequent_length__:
+                            self.__sequent_length__:
                                 tf.FixedLenFeature([], dtype=tf.int64),
                             self.__input_sequence_end_date__:
                                 tf.FixedLenFeature([], dtype=tf.string),
@@ -547,7 +528,7 @@ class InputData():
         #begin to encode
         ex = tf.train.SequenceExample()
         ex.context.feature[
-            self.__default_sequent_length__].int64_list.value.append(length)
+            self.__sequent_length__].int64_list.value.append(length)
         ex.context.feature[
             self.__input_sequence_start_date__].bytes_list.value.append(input_start)
         ex.context.feature[
@@ -557,7 +538,7 @@ class InputData():
         ex.context.feature[
             self.__target_sequence_end_date__].bytes_list.value.append(target_end)
         ex.context.feature[
-            self.__default_token__].bytes_list.value.append(token_bytes)
+            self.__token__].bytes_list.value.append(token_bytes)
         fl_inputs = ex.feature_lists.feature_list[self.__example_input_sequence__]
         fl_targets = ex.feature_lists.feature_list[self.__example_target_sequence__]
         for _input, _target in zip(inputs, targets):
@@ -567,12 +548,12 @@ class InputData():
     #
     def _decode_train_example(self, ex_serial):
         context_features = {
-            self.__default_sequent_length__: tf.FixedLenFeature([], dtype=tf.int64),
+            self.__sequent_length__: tf.FixedLenFeature([], dtype=tf.int64),
             self.__input_sequence_start_date__: tf.FixedLenFeature([], dtype=tf.string),
             self.__input_sequence_end_date__: tf.FixedLenFeature([], dtype=tf.string),
             self.__target_sequence_start_date__: tf.FixedLenFeature([], dtype=tf.string),
             self.__target_sequence_end_date__: tf.FixedLenFeature([], dtype=tf.string),
-            self.__default_token__: tf.FixedLenFeature([], dtype=tf.string)
+            self.__token__: tf.FixedLenFeature([], dtype=tf.string)
         }
         sequence_features = {
             self.__example_input_sequence__: tf.FixedLenSequenceFeature([], dtype=tf.float32),
@@ -585,27 +566,6 @@ class InputData():
         )
         return context_parsed, sequence_parsed
         
-    #
-    def __create_filename__(self, files):
-        ''' The form of name of result data are "prediction000.tfrecord"
-            The number in name of file is the "000"
-            When the size is large enough, the result data will be stored in another file
-            And the name of new file will be the "prediction001.tfrecord"
-            The method will search the in the list of files, and find the greatest number
-            Then will create an new file which number will be plus 1 to the greatest number
-        '''
-        _file = files[len(files) - 1]
-        _filename = _file.split('.')
-        file_base = _filename[0][0:-self.__bits_of_file_number__]
-        file_suffix = _filename[1]
-        file_number = int(_filename[0][-self.__bits_of_file_number__:])
-        file_number += 1
-        string_number = None
-        if file_number >= 100: string_number = str(file_number)
-        if file_number < 100 and  file_number >= 10: string_number = '0' + str(file_number)
-        if file_number < 10: string_number = '00' +str(file_number)
-        filename = file_base + string_number + '.' + file_suffix
-        return filename
     #
     def _get_files(self, pure_path, match):
         ''' This method get all the files in specified raw data dir
