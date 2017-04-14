@@ -33,50 +33,7 @@ RAW_DATA_FILE_EXTENSION = '*.csv'
 SEQUENCE_LENGTH = None
 FEATURE_SIZE = None
 
-#
-def _make_examples(sequence):
-    ''' Convert the sequence to examples which length is sequence_length
-        If sequence' length is less sequence_length, pad it with zoers
-    '''
-    _lines = []
-    #remove the datetime, and convert string to float
-    for line in sequence:
-        _line = [float(x) for x in line[1:]]
-        _lines.append(_line)
-    #Reverse order with datetime
-    _lines.reverse()
-    #begin to make examples
-    _has_short_example = False
-    _length_data = len(_lines)
-    #At this time, all the example's length is sequence_length
-    _num_examples = _length_data // (2*SEQUENCE_LENGTH)
-    if _length_data % (2*SEQUENCE_LENGTH) != 0:#There is a short example
-        _num_examples += 1
-        _has_short_example = True
-    #make examples
-    _examples = []
-    for n in range(_num_examples):
-        _example = None
-        _target = None
-        _start = 2*n*SEQUENCE_LENGTH
-        _end = _start + 2*SEQUENCE_LENGTH
-        _tmp = None
-        if n < _num_examples - 1:
-            _tmp = _lines[_start: _end]
-            _example = _tmp[0: SEQUENCE_LENGTH]
-            _target = _tmp[SEQUENCE_LENGTH:]
-        else:
-            if _has_short_example:
-                _tmp = _lines[_start:]
-                _example = _tmp[0: SEQUENCE_LENGTH // 2]
-                _target = _tmp[SEQUENCE_LENGTH//2:]
-        _examples.append(_example)
-        _examples.append(_target)
-    return _examples
-#
-def __write_one_example_to_file__(writer, example):
-    for _line in example:
-        writer.writerow(_line)
+
 def _save_examples(examples):
     ''' Write the examples to a few file of csv format
         The csv file can have one million lines
@@ -129,12 +86,6 @@ def _save_examples(examples):
         _valid_csvfile.close()
         _test_csvfile.close()
 #
-def _combinate_example(total_examples, other_examples):
-    if not isinstance(total_examples, list) or not isinstance(other_examples, list):
-        raise ValueError("The both two parameter must be a list!")
-    for _line in other_examples:
-        total_examples.append(_line)
-#
 def _make_decision_(seed=None):
     _seed = None
     if seed is None:
@@ -149,57 +100,11 @@ def _make_decision_(seed=None):
         return 1
     if _decision <= 1.0:#test
         return 2
-def _save_prediction_sequence(prediction_sequence):
-    ''' This function will save the data for prediction
-        the file format is json
-    '''
-    with MODEL_DATA_FS.open(RESULT_DATA_PATH + 'prediction_sequence.json',
-                            mode='w') as jsonfile:
-        json.dump(prediction_sequence, jsonfile)
-#
-def _get_prediction_sequence(filename, sequence):
-    return filename, sequence
-def _get_statistical_data(examples):
-    examples_array = np.array(examples)
-    price_array = examples_array[:, 0:4]
-    volumn_array = examples_array[:, 4:]
-    price_mean = np.mean(price_array)
-    price_std = np.std(price_array)
-    volumn_mean = np.mean(volumn_array)
-    volumn_std = np.std(volumn_array)
-    return price_mean, price_std, volumn_mean, volumn_std
-def _convert_data_to_example(path, match):
-    ''' All the file in raw_pure_path will be converted to the four parts
-        The first part is about the examples for train
-        The second part is about the example for valid
-        The third part is about the example for test
-        The fourh part is about the sequence for prediction
-        The first three parts will be both input and output sequence
-        The last part will be only with input sequence
-        The first three parts will be stored in csv format
-        The last part will be stored in json for being easy to search
-    '''
-    files = _get_file_list(path, match)
-    if len(list(files)) == 0:
-        raise ValueError('There are any files specified by parameter raw_pure_path and match')
-    prediction_sequence = {} #store sequence for prediction
-    _examples = []#store the first three
-    _tmp = []
-    for filename in files:
-        _lines = []
-        with MODEL_DATA_FS.open(filename, mode='r') as _file:
-            for _line in _file:
-                _lines.append(_line)
-        #for prediction
-        _key, value = _get_prediction_sequence(filename, _lines)
-        prediction_sequence[_key] = value
-        _save_prediction_sequence(prediction_sequence)
-        #for the first three
-        _examples_ = _make_examples(_lines[SEQUENCE_LENGTH:])
-        _combinate_example(_tmp, _examples_)
 
-    price_mean, price_std, volumn_mean, volumn_std = _get_statistical_data(_tmp)
-    _save_examples(_examples)
+
+
+
+
 #
 class stat_feature():
     '''store the stat feature of price and volumn respectively
