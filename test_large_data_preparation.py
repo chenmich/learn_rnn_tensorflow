@@ -325,18 +325,18 @@ class test_make_example_for_trains(tf.test.TestCase):
         self.assertEqual(MAX_STEP // 2, len(example_lines[num_example - 1]['target_sequence']))
     #
     def test_calculate_statistical_feature(self):
-        # the already available stat feature of examples for train will be stored 
+        # the already available stat feature of examples for train will be stored
         # in the field of InputData
         # If there is any added, the stat feature will be calculated by the function
-        # in the method calculate_statistical_feature 
-        
+        # in the method calculate_statistical_feature
+
         def Assertion(expect, real):
             self.assertEqual(expect.num, real.num)
             self.assertAllClose(expect.mean, real.mean)
             self.assertAllClose(expect.std, real.std)
 
         def get_example(lines):
-            _lines = [[str(datetime.date.today())] + line for line in lines.tolist()]       
+            _lines = [[str(datetime.date.today())] + line for line in lines.tolist()]
             _lines.reverse()
             example = {'input_sequence': _lines[0:MAX_STEP],
                        'target_sequence': _lines[MAX_STEP:]}
@@ -348,19 +348,17 @@ class test_make_example_for_trains(tf.test.TestCase):
             stat.mean = np.mean(lines)
             stat.std = np.std(lines)
             return stat
-        
-        
         #prepare data
         lines = np.random.normal(size=2*MAX_STEP*
-                                                FEATURE_SIZE).reshape(2*MAX_STEP, FEATURE_SIZE)
+                                 FEATURE_SIZE).reshape(2*MAX_STEP, FEATURE_SIZE)
         anotherLines = np.random.normal(size=2*MAX_STEP*
-                                                       FEATURE_SIZE).reshape(2*MAX_STEP, FEATURE_SIZE)
-        
+                                        FEATURE_SIZE).reshape(2*MAX_STEP, FEATURE_SIZE)
+
         example = get_example(lines)
         anotherExample = get_example(anotherLines)
         stat_price = get_stat(lines[0:, 0:FEATURE_SIZE - 1])
         stat_volumn = get_stat(lines[0:, FEATURE_SIZE - 1:])
-        
+
         combinat_lines = np.array(lines.tolist() + anotherLines.tolist())
         combinat_stat_price = get_stat(combinat_lines[0:, 0: FEATURE_SIZE - 1])
         combinat_stat_volumn = get_stat(combinat_lines[0:, FEATURE_SIZE - 1:])

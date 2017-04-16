@@ -25,86 +25,6 @@ import tensorflow as tf
 from fs.osfs import OSFS
 
 import rnn_model_exception
-
-MODEL_DATA_FS = None
-RAW_DATA_PATH = 'raw_data/'
-RESULT_DATA_PATH = 'result_data/'
-RAW_DATA_FILE_EXTENSION = '*.csv'
-SEQUENCE_LENGTH = None
-FEATURE_SIZE = None
-
-
-def _save_examples(examples):
-    ''' Write the examples to a few file of csv format
-        The csv file can have one million lines
-        All the lines will dived  sequence of groups of examples
-        In a group, the input sequence will be set first, then lines of the target
-        For example,
-
-        ......
-        22.0, 33.5, 44.3, 22.0, 88.7
-        32.2, 22.8, 55.4, 61.3, 99.2
-        22.3, 33.5, 67.1, 22.3, 89.9
-        33.2, 22.1, 67.4, 33.1, 99.8
-        ......
-
-        In above group of example,
-        the input sequence is consist of the first two lines,
-        and the target sequenc is consist of the esecond tow lines.
-        There are other groups before and after the group.
-        This function will save the data for train, valid and test
-    '''
-    #preparation for writer of csv file
-    if not isinstance(examples, list):
-        raise ValueError("The parameter must be list!")
-
-    _train_csvfile = MODEL_DATA_FS.open(RESULT_DATA_PATH + 'train_data.csv', mode='a')
-    _train_writer = csv.writer(_train_csvfile)
-    _valid_csvfile = MODEL_DATA_FS.open(RESULT_DATA_PATH +'valid_data.csv', mode='a')
-    _valid_writer = csv.writer(_valid_csvfile)
-    _test_csvfile = MODEL_DATA_FS.open(RESULT_DATA_PATH + 'test_data.csv', mode='a')
-    _test_writter = csv.writer(_test_csvfile)
-
-    for _example in examples:
-        _length = len(_example)
-        _tmp = []
-        if _length != SEQUENCE_LENGTH:
-            _padding = np.zeros((SEQUENCE_LENGTH - _length)
-                                *FEATURE_SIZE).reshape((SEQUENCE_LENGTH - _length),
-                                                       FEATURE_SIZE).tolist()
-            _tmp = _example + _padding
-        else:
-            _temp = _example
-        _decision = _make_decision_(90)
-        if _decision == 0:
-            __write_one_example_to_file__(_train_writer, _tmp)
-        if _decision == 1:
-            __write_one_example_to_file__(_valid_writer, _tmp)
-        if _decision == 2:
-            __write_one_example_to_file__(_test_writter, _tmp)
-        _train_csvfile.close()
-        _valid_csvfile.close()
-        _test_csvfile.close()
-#
-def _make_decision_(seed=None):
-    _seed = None
-    if seed is None:
-        _seed = datetime.now().microsecond()
-    else:
-        _seed = seed
-    r_state = np.random.RandomState(_seed)
-    _decision = r_state.random_sample()
-    if _decision >= 0.0 and _decision < 0.6:#train
-        return 0
-    if _decision >= 0.6 and _decision < 0.8:#valid
-        return 1
-    if _decision <= 1.0:#test
-        return 2
-
-
-
-
-
 #
 class stat_feature():
     '''store the stat feature of price and volumn respectively
@@ -116,6 +36,8 @@ class stat_feature():
 
 #
 class ExampleType():
+    ''' the type code of examples based on the usage 
+    '''
     train = 0
     valid = 1
     test = 2
@@ -144,7 +66,11 @@ class ExampleString():
     target_end_date = 'target_end'
     # size of the all tfrecord file, if larger than this, it will be divided
     result_file_size = 30 * 1024 * 1024
-
+#
+example_map = {ExampleType.prediction: AllForFile.prediction_record,
+               ExampleType.test: AllForFile.test_record,
+               ExampleType.train: AllForFile.train_record,
+               ExampleType.valid: AllForFile.valid_record}
 #refactor to oriented-object
 class InputData():
     ''' This class is for preparation of model data
@@ -226,6 +152,7 @@ class InputData():
                            the file name is key dictionary for examples for prediction
         '''
         ex = self._encode_prediction_example(lines, token)
+        self._save_examples(ex.SerializeToString(), ExampleType.prediction)
 
     #
     def _make_examples_for_trains(self, lines, token):
@@ -257,18 +184,11 @@ class InputData():
         for example in examples:
             ex = self._encode_train_example(example, token)
             _example_type = _make_decision_type()
-            if _example_type == example_type.train:
+            if _example_type == ExampleType.train:
                 self._calculate_statistical_feature(example)
             self._save_examples(ex.SerializeToString(), _example_type)
     #
     def _save_examples(self, ex_serial, ex_type):
-        if (ex_type != example_type.train) or (
-                ex_type != example_type.test) or (
-                    ex_type != example_type.valid) or (
-                        ex_type != example_type.prediction):
-            raise rnn_model_exception.ExampleTypeUnknown(
-                '''The type of example may be:train,test, valid and prediction!
-                   Please look at class example_type for details''')
         raise Exception('The method _save_examples is not impletmented!')
     #
     def _calculate_statistical_feature(self, example):
