@@ -17,14 +17,16 @@
 import argparse
 import csv
 import json
-from datetime import datetime
 import tempfile
+from datetime import datetime
 
 import numpy as np
 import tensorflow as tf
 from fs.osfs import OSFS
 
 import rnn_model_exception
+
+
 #
 class stat_feature():
     '''store the stat feature of price and volumn respectively
@@ -85,8 +87,6 @@ class InputData():
         self.__result_data_dir__ = 'result_data/' + 'dataset' + (
             str(max_step) + '_step' + '/')
         self.__fsys_data__ = fsys_data
-        if self.__fsys_data__.exists(self.__result_data_dir__) is not True:
-            self.__fsys_data__.makedir(self.__result_data_dir__)
         #statistical feature
         self.__stat_price__ = 'price'
         self.__stat_volumn__ = 'volumn'
@@ -183,13 +183,22 @@ class InputData():
         examples = self._divide_line(lines)
         for example in examples:
             ex = self._encode_train_example(example, token)
-            _example_type = _make_decision_type()
+            _example_type = _make_decision_type(seed=0)
             if _example_type == ExampleType.train:
                 self._calculate_statistical_feature(example)
             self._save_examples(ex.SerializeToString(), _example_type)
     #
     def _save_examples(self, ex_serial, ex_type):
-        raise Exception('The method _save_examples is not impletmented!')
+        filename = self._get_fileobject(ex_type)
+        with self.__fsys_data__.open(filename, mode='a') as fp:
+            self.__fsys_data__.tree()
+            writer = tf.python_io.TFRecordWriter(fp.name)
+            writer.write(ex.SerializeToString())
+            writer.close()
+        
+    #
+    def _get_fileobject(self, ex_type):
+        pass
     #
     def _calculate_statistical_feature(self, example):
         def _combinate_stat(stat1, stat2):

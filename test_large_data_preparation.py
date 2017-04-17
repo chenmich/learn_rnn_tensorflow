@@ -18,6 +18,7 @@ import csv
 import datetime
 import numpy as np
 import tensorflow as tf
+import fs
 from fs import memoryfs
 
 import large_data_preparation as ldp
@@ -52,7 +53,42 @@ MAX_STEP = 200
 FEATURE_SIZE = 5
 FILE_WILDCARD = '*.csv'
 NUM_RAW_FILES = 5
+class example_content():
+    def __init__(self, input_start, input_end,
+                 target_start, target_end,
+                 length, token):
+        self.input_start = input_start
+        self.input_end = input_end
+        self.target_start = target_start
+        self.target_end = target_end
+        self.length = length
+        self.token = token
 #
+def prepare_example_line():
+    max_step = MAX_STEP
+    feature_size = FEATURE_SIZE
+    _lines = np.random.normal(size=2*max_step*feature_size).reshape(
+        2*max_step, feature_size).tolist()
+    lines = [[str(datetime.date.today())] + _line for _line in _lines]
+    lines.reverse()
+    input_sequence = lines[0:MAX_STEP]
+    target_sequence = lines[MAX_STEP:]
+    example_line = {ldp.ExampleString.input_sequence: input_sequence,
+                    ldp.ExampleString.target_sequence: target_sequence}
+    token = 'some00000'
+    input_start = bytes(lines[0][0], 'utf-8')
+    input_end = bytes(lines[max_step - 1][0], 'utf-8')
+    target_start = bytes(lines[max_step][0], 'utf-8')
+    target_end = bytes(lines[2*max_step - 1][0], 'utf-8')
+    length = len(_lines) // 2
+    content = example_content(input_start, input_end, target_start, target_end, length, token)
+    _inputs = [line[1:] for line in input_sequence]
+    _target = [line[1:] for line in target_sequence]
+    input_sequence = np.array(_inputs).flatten()
+    target_sequence = np.array(_target).flatten()
+    return example_line, content, input_sequence, target_sequence
+    
+
 #test InputData class
 class test_get_files(tf.test.TestCase):
     ''' test the method of InputData' method _get_raw_data_files
@@ -238,40 +274,23 @@ class test_encode_decode_example_trains(tf.test.TestCase):
             And valid the result
         '''
         #prepare a example for trains
-        inputdata = ldp.InputData(self.fsys, MAX_STEP, FEATURE_SIZE)
-        max_step = inputdata.__max_step__
-        feature_size = inputdata.__feature_size__
-        _token = 'some00000'
-        _lines = np.random.normal(size=2*max_step*feature_size).reshape(
-            2*max_step, feature_size).tolist()
-        lines = [[str(datetime.date.today())] + _line for _line in _lines]
-        lines.reverse()
-        input_sequence = lines[0:MAX_STEP]
-        target_sequence = lines[MAX_STEP:]
-        example_line = {ldp.ExampleString.input_sequence: input_sequence,
-                        ldp.ExampleString.target_sequence: target_sequence}
+        example_line, content, input_sequence, target_sequence = prepare_example_line()
+        input_start = content.input_start
+        input_end = content.input_end
+        target_start = content.target_start
+        target_end = content.target_end
+        length = content.length
+        token = content.token
         #exercise
-        ex = inputdata._encode_train_example(example_line, _token)
+        inputdata = ldp.InputData(self.fsys, MAX_STEP, FEATURE_SIZE)
+        ex = inputdata._encode_train_example(example_line, token)
         context_parsed, sequnece_parsed = inputdata._decode_train_example(ex.SerializeToString())
-
-        #prepare expect content
-        input_start = bytes(lines[0][0], 'utf-8')
-        input_end = bytes(lines[max_step - 1][0], 'utf-8')
-        target_start = bytes(lines[max_step][0], 'utf-8')
-        target_end = bytes(lines[2*max_step - 1][0], 'utf-8')
-        token = bytes(_token, 'utf-8')
-        length = len(_lines) // 2
-        _inputs = [line[1:] for line in input_sequence]
-        _target = [line[1:] for line in target_sequence]
-        input_sequence = np.array(_inputs).flatten()
-        target_sequence = np.array(_target).flatten()
-
         #valid
         with tf.Session() as sess:
             self.assertEqual(sess.run(context_parsed[ldp.ExampleString.sequent_length]),
                              length)
             self.assertEqual(sess.run(context_parsed[ldp.ExampleString.token]),
-                             token)
+                             bytes(token, 'utf-8'))
             self.assertEqual(sess.run(context_parsed[ldp.ExampleString.input_start_date]),
                              input_start)
             self.assertEqual(sess.run(context_parsed[ldp.ExampleString.input_end_date]),
@@ -375,8 +394,48 @@ class test_make_example_for_trains(tf.test.TestCase):
         Assertion(combinat_stat_volumn, inputdata._stat_features[inputdata.__stat_volumn__])
     #
 #
+class test_path():
+        path1 = 'result_data'
+        path2 = 'result_data/dataset200_step'
+        filename = 'result_data/dataset200_step/test.tfrecord'
 class test_save_examples(tf.test.TestCase):
-    pass
+    
+
+    def setUp(self):
+        self.fsys = fs.open_fs('data')
+        self.fsys.makedir(test_path.path1)
+        self.fsys.makedir(test_path.path2)
+        self.fsys.create(test.path.filename)
+    def tearDown(self):
+        file_exist = self.fsys.exists(test_path.filename)
+        if file_exist is True:
+            self.fsys.remove(filename)
+        self.fsys.removedir(path2)
+        self.fsys.removedir(path1)
+        self.fsys.close()
+    def test_save(self):
+        class inputdataForTest_savaExample(ldp.InputData):
+            def _get_fileobject(self, ex_type):
+                return test_path.filename
+        #
+        example_type = ldp.ExampleType.test
+        inputdata = inputdataForTest_savaExample(self.fsys, MAX_STEP, FEATURE_SIZE)
+        max_step = inputdata.__max_step__
+        feature_size = inputdata.__feature_size__
+        _lines = np.random.normal(size=2*max_step*feature_size).reshape(
+            2*max_step, feature_size).tolist()
+        lines = [[str(datetime.date.today())] + _line for _line in _lines]
+        lines.reverse()
+        input_sequence = lines[0:MAX_STEP]
+        target_sequence = lines[MAX_STEP:]
+        example_line = {ldp.ExampleString.input_sequence: input_sequence,
+                        ldp.ExampleString.target_sequence: target_sequence}
+        
+        _token = 'some00000'
+        ex = inputdata._encode_train_example(example_line, _token)
+        inputdata._save_examples(ex.SerializeToString(), example_type)
+        self.assertGreater(fsys.getsize(path + filename), 0)
+
 #
 if __name__ == "__main__":
     tf.test.main()
