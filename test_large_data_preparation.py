@@ -62,8 +62,8 @@ class test_get_files(tf.test.TestCase):
         '''
         fsys = get_fsys()
         inputdata = ldp.InputData(fsys, MAX_STEP, FEATURE_SIZE)
-        pure_path = inputdata.__default_raw_data_dir__
-        match = inputdata.__raw_file_wildcard__
+        pure_path = inputdata.__raw_data_dir__
+        match = ldp.AllForFile.raw_file_wildcard
         files = inputdata._get_files(pure_path, match)
         self.assertEqual(len(files), NUM_RAW_FILES)
         self.assertEqual(files[0], 'some00000.csv')
@@ -158,7 +158,7 @@ class test_raw_data_check(tf.test.TestCase):
         lines = []
         self.assertFalse(inputdata._raw_data_check('some00005.csv'))
         # valid the problem not to be comptible logged correctly
-        log_path = inputdata.__default_result_data_dir__ + inputdata.__default_log_file__
+        log_path = inputdata.__result_data_dir__ + ldp.AllForFile.log_file
         logcontent = ['some00005.csv', rnn_model_exception.DataNotComptible.has_non_float]
         self.__raw_not_comptible_log_assertion(log_path, logcontent)
     def __raw_not_comptible_log_assertion(self, log_path, logcontent):
@@ -193,11 +193,11 @@ class test_encode_decode_example_prediction(tf.test.TestCase):
         start_expect = bytes(lines[MAX_STEP - 1][0], 'utf-8')
         end_expect = bytes(lines[0][0], 'utf-8')
         inputdata = ldp.InputData(self.fsys, MAX_STEP, FEATURE_SIZE)
-        context_token = inputdata.__token__
-        context_length = inputdata.__sequent_length__
-        context_start = inputdata.__input_sequence_start_date__
-        context_end = inputdata.__input_sequence_end_date__
-        input_sequence = inputdata.__example_input_sequence__
+        context_token = ldp.ExampleString.token
+        context_length = ldp.ExampleString.sequent_length
+        context_start = ldp.ExampleString.input_start_date
+        context_end = ldp.ExampleString.input_end_date
+        input_sequence = ldp.ExampleString.input_sequence
 
         #exercise
         ex = inputdata._encode_prediction_example(lines, 'some00000')
@@ -248,8 +248,8 @@ class test_encode_decode_example_trains(tf.test.TestCase):
         lines.reverse()
         input_sequence = lines[0:MAX_STEP]
         target_sequence = lines[MAX_STEP:]
-        example_line = {inputdata.__example_input_sequence__: input_sequence,
-                        inputdata.__example_target_sequence__: target_sequence}
+        example_line = {ldp.ExampleString.input_sequence: input_sequence,
+                        ldp.ExampleString.target_sequence: target_sequence}
         #exercise
         ex = inputdata._encode_train_example(example_line, _token)
         context_parsed, sequnece_parsed = inputdata._decode_train_example(ex.SerializeToString())
@@ -268,21 +268,21 @@ class test_encode_decode_example_trains(tf.test.TestCase):
 
         #valid
         with tf.Session() as sess:
-            self.assertEqual(sess.run(context_parsed[inputdata.__sequent_length__]),
+            self.assertEqual(sess.run(context_parsed[ldp.ExampleString.sequent_length]),
                              length)
-            self.assertEqual(sess.run(context_parsed[inputdata.__token__]),
+            self.assertEqual(sess.run(context_parsed[ldp.ExampleString.token]),
                              token)
-            self.assertEqual(sess.run(context_parsed[inputdata.__input_sequence_start_date__]),
+            self.assertEqual(sess.run(context_parsed[ldp.ExampleString.input_start_date]),
                              input_start)
-            self.assertEqual(sess.run(context_parsed[inputdata.__input_sequence_end_date__]),
+            self.assertEqual(sess.run(context_parsed[ldp.ExampleString.input_end_date]),
                              input_end)
-            self.assertEqual(sess.run(context_parsed[inputdata.__target_sequence_start_date__]),
+            self.assertEqual(sess.run(context_parsed[ldp.ExampleString.target__start_date]),
                              target_start)
-            self.assertEqual(sess.run(context_parsed[inputdata.__target_sequence_end_date__]),
+            self.assertEqual(sess.run(context_parsed[ldp.ExampleString.target_end_date]),
                              target_end)
-            self.assertAllClose(sess.run(sequnece_parsed[inputdata.__example_input_sequence__]),
+            self.assertAllClose(sess.run(sequnece_parsed[ldp.ExampleString.input_sequence]),
                                 input_sequence)
-            self.assertAllClose(sess.run(sequnece_parsed[inputdata.__example_target_sequence__]),
+            self.assertAllClose(sess.run(sequnece_parsed[ldp.ExampleString.target_sequence]),
                                 target_sequence)
 
 
@@ -325,18 +325,18 @@ class test_make_example_for_trains(tf.test.TestCase):
         self.assertEqual(MAX_STEP // 2, len(example_lines[num_example - 1]['target_sequence']))
     #
     def test_calculate_statistical_feature(self):
-        # the already available stat feature of examples for train will be stored 
+        # the already available stat feature of examples for train will be stored
         # in the field of InputData
         # If there is any added, the stat feature will be calculated by the function
-        # in the method calculate_statistical_feature 
-        
+        # in the method calculate_statistical_feature
+
         def Assertion(expect, real):
             self.assertEqual(expect.num, real.num)
             self.assertAllClose(expect.mean, real.mean)
             self.assertAllClose(expect.std, real.std)
 
         def get_example(lines):
-            _lines = [[str(datetime.date.today())] + line for line in lines.tolist()]       
+            _lines = [[str(datetime.date.today())] + line for line in lines.tolist()]
             _lines.reverse()
             example = {'input_sequence': _lines[0:MAX_STEP],
                        'target_sequence': _lines[MAX_STEP:]}
@@ -348,19 +348,17 @@ class test_make_example_for_trains(tf.test.TestCase):
             stat.mean = np.mean(lines)
             stat.std = np.std(lines)
             return stat
-        
-        
         #prepare data
         lines = np.random.normal(size=2*MAX_STEP*
-                                                FEATURE_SIZE).reshape(2*MAX_STEP, FEATURE_SIZE)
+                                 FEATURE_SIZE).reshape(2*MAX_STEP, FEATURE_SIZE)
         anotherLines = np.random.normal(size=2*MAX_STEP*
-                                                       FEATURE_SIZE).reshape(2*MAX_STEP, FEATURE_SIZE)
-        
+                                        FEATURE_SIZE).reshape(2*MAX_STEP, FEATURE_SIZE)
+
         example = get_example(lines)
         anotherExample = get_example(anotherLines)
         stat_price = get_stat(lines[0:, 0:FEATURE_SIZE - 1])
         stat_volumn = get_stat(lines[0:, FEATURE_SIZE - 1:])
-        
+
         combinat_lines = np.array(lines.tolist() + anotherLines.tolist())
         combinat_stat_price = get_stat(combinat_lines[0:, 0: FEATURE_SIZE - 1])
         combinat_stat_volumn = get_stat(combinat_lines[0:, FEATURE_SIZE - 1:])

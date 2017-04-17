@@ -25,86 +25,6 @@ import tensorflow as tf
 from fs.osfs import OSFS
 
 import rnn_model_exception
-
-MODEL_DATA_FS = None
-RAW_DATA_PATH = 'raw_data/'
-RESULT_DATA_PATH = 'result_data/'
-RAW_DATA_FILE_EXTENSION = '*.csv'
-SEQUENCE_LENGTH = None
-FEATURE_SIZE = None
-
-
-def _save_examples(examples):
-    ''' Write the examples to a few file of csv format
-        The csv file can have one million lines
-        All the lines will dived  sequence of groups of examples
-        In a group, the input sequence will be set first, then lines of the target
-        For example,
-
-        ......
-        22.0, 33.5, 44.3, 22.0, 88.7
-        32.2, 22.8, 55.4, 61.3, 99.2
-        22.3, 33.5, 67.1, 22.3, 89.9
-        33.2, 22.1, 67.4, 33.1, 99.8
-        ......
-
-        In above group of example,
-        the input sequence is consist of the first two lines,
-        and the target sequenc is consist of the esecond tow lines.
-        There are other groups before and after the group.
-        This function will save the data for train, valid and test
-    '''
-    #preparation for writer of csv file
-    if not isinstance(examples, list):
-        raise ValueError("The parameter must be list!")
-
-    _train_csvfile = MODEL_DATA_FS.open(RESULT_DATA_PATH + 'train_data.csv', mode='a')
-    _train_writer = csv.writer(_train_csvfile)
-    _valid_csvfile = MODEL_DATA_FS.open(RESULT_DATA_PATH +'valid_data.csv', mode='a')
-    _valid_writer = csv.writer(_valid_csvfile)
-    _test_csvfile = MODEL_DATA_FS.open(RESULT_DATA_PATH + 'test_data.csv', mode='a')
-    _test_writter = csv.writer(_test_csvfile)
-
-    for _example in examples:
-        _length = len(_example)
-        _tmp = []
-        if _length != SEQUENCE_LENGTH:
-            _padding = np.zeros((SEQUENCE_LENGTH - _length)
-                                *FEATURE_SIZE).reshape((SEQUENCE_LENGTH - _length),
-                                                       FEATURE_SIZE).tolist()
-            _tmp = _example + _padding
-        else:
-            _temp = _example
-        _decision = _make_decision_(90)
-        if _decision == 0:
-            __write_one_example_to_file__(_train_writer, _tmp)
-        if _decision == 1:
-            __write_one_example_to_file__(_valid_writer, _tmp)
-        if _decision == 2:
-            __write_one_example_to_file__(_test_writter, _tmp)
-        _train_csvfile.close()
-        _valid_csvfile.close()
-        _test_csvfile.close()
-#
-def _make_decision_(seed=None):
-    _seed = None
-    if seed is None:
-        _seed = datetime.now().microsecond()
-    else:
-        _seed = seed
-    r_state = np.random.RandomState(_seed)
-    _decision = r_state.random_sample()
-    if _decision >= 0.0 and _decision < 0.6:#train
-        return 0
-    if _decision >= 0.6 and _decision < 0.8:#valid
-        return 1
-    if _decision <= 1.0:#test
-        return 2
-
-
-
-
-
 #
 class stat_feature():
     '''store the stat feature of price and volumn respectively
@@ -113,52 +33,60 @@ class stat_feature():
         self.num = 0
         self.mean = 0
         self.std = 0
-        
+
 #
-class example_type():
+class ExampleType():
+    ''' the type code of examples based on the usage 
+    '''
     train = 0
     valid = 1
     test = 2
     prediction = 3
+#
+class AllForFile():
+    ''' This class is a container for string about file
+    '''
+    prediction_record = 'prediction*.tfrecord'
+    valid_record = 'valid*.tfrecord'
+    test_record = 'test*.tfrecord'
+    train_record = 'train*.tfrecord'
+    raw_file_wildcard = '*.csv'
+    log_file = 'logerror*.txt'
+#
+class ExampleString():
+    ''' This class for example's string
+    '''
+    input_sequence = 'input_sequence'
+    target_sequence = 'target_sequence'
+    token = 'token'
+    sequent_length = 'length'
+    input_start_date = 'input_start'
+    input_end_date = 'input_end'
+    target__start_date = 'target_start'
+    target_end_date = 'target_end'
+    # size of the all tfrecord file, if larger than this, it will be divided
+    result_file_size = 30 * 1024 * 1024
+#
+example_map = {ExampleType.prediction: AllForFile.prediction_record,
+               ExampleType.test: AllForFile.test_record,
+               ExampleType.train: AllForFile.train_record,
+               ExampleType.valid: AllForFile.valid_record}
 #refactor to oriented-object
 class InputData():
     ''' This class is for preparation of model data
         At least, this class must convert the csv format to tfrecord format
     '''
-    def __init__(self, fsys_data, max_step, feature_size, raw_file_wildcard=None):
+    def __init__(self, fsys_data, max_step, feature_size):
         #model parameter
         self.__max_step__ = max_step
         self.__feature_size__ = feature_size
-        self.__size_result_file__ = 30*1024*1024
-        self.__bits_of_file_number__ = 5
         #file system
-        self.__default_raw_data_dir__ = 'raw_data/'
-        self.__default_result_data_dir__ = 'result_data/' + 'dataset' + (
+        self.__raw_data_dir__ = 'raw_data/'
+        self.__result_data_dir__ = 'result_data/' + 'dataset' + (
             str(max_step) + '_step' + '/')
-        self.__default_log_file__ = 'logerror*.txt'
         self.__fsys_data__ = fsys_data
-        #tf.sequenceExample
-        self.__example_input_sequence__ = 'input_sequence'
-        self.__example_target_sequence__ = 'target_sequence'
-        self.__token__ = 'token'
-        self.__sequent_length__ = 'length'
-        self.__input_sequence_start_date__ = 'input_start'
-        self.__input_sequence_end_date__ = 'input_end'
-        self.__target_sequence_start_date__ = 'target_start'
-        self.__target_sequence_end_date__ = 'target_end'
-        #file match symobles
-        #tfrecord file
-        self.__default_prediction_tfrecordfile__ = 'prediction*.tfrecord'
-        self.__default_valid_tfrecordfile__ = 'valid*.tfrecord'
-        self.__default_test_tfrecordfile__ = 'test*.tfrecord'
-        self.__default_train_tfrecordfile__ = 'train*.tfrecord'
-        #raw data
-        if raw_file_wildcard is None:
-            self.__raw_file_wildcard__ = '*.csv'
-        else:
-            self.__raw_file_wildcard__ = raw_file_wildcard
-        if self.__fsys_data__.exists(self.__default_result_data_dir__) is not True:
-            self.__fsys_data__.makedir(self.__default_result_data_dir__)
+        if self.__fsys_data__.exists(self.__result_data_dir__) is not True:
+            self.__fsys_data__.makedir(self.__result_data_dir__)
         #statistical feature
         self.__stat_price__ = 'price'
         self.__stat_volumn__ = 'volumn'
@@ -168,7 +96,7 @@ class InputData():
     #
     def __setup_result_dir__(self):
         fsys = self.__fsys_data__
-        pure_path = self.__default_result_data_dir__
+        pure_path = self.__result_data_dir__
         if fsys.exists('/result_data/') is not True:
             fsys.makedir('/result_data/')
         if fsys.exists(pure_path) is not True:
@@ -183,7 +111,7 @@ class InputData():
             And The first three parts are unified as training data
         '''
         fsys = self.__fsys_data__
-        files = self._get_files(self.__default_raw_data_dir__, self.__raw_file_wildcard__)
+        files = self._get_files(self.__raw_data_dir__, AllForFile.raw_file_wildcard)
         if len(files) == 0:
             raise rnn_model_exception.NoRawDataFileFound('There are any files of raw data found')
         #randomly shuffle the order of files
@@ -224,6 +152,7 @@ class InputData():
                            the file name is key dictionary for examples for prediction
         '''
         ex = self._encode_prediction_example(lines, token)
+        self._save_examples(ex.SerializeToString(), ExampleType.prediction)
 
     #
     def _make_examples_for_trains(self, lines, token):
@@ -255,18 +184,11 @@ class InputData():
         for example in examples:
             ex = self._encode_train_example(example, token)
             _example_type = _make_decision_type()
-            if _example_type == example_type.train:
+            if _example_type == ExampleType.train:
                 self._calculate_statistical_feature(example)
             self._save_examples(ex.SerializeToString(), _example_type)
     #
     def _save_examples(self, ex_serial, ex_type):
-        if (ex_type != example_type.train) or (
-                ex_type != example_type.test) or (
-                    ex_type != example_type.valid) or (
-                        ex_type != example_type.prediction):
-            raise rnn_model_exception.ExampleTypeUnknown(
-                '''The type of example may be:train,test, valid and prediction!
-                   Please look at class example_type for details''')
         raise Exception('The method _save_examples is not impletmented!')
     #
     def _calculate_statistical_feature(self, example):
@@ -293,8 +215,8 @@ class InputData():
             stat.std = np.sqrt(sigma_square)
             return stat
 
-        input_sequence = example[self.__example_input_sequence__]
-        target_sequence = example[self.__example_target_sequence__]
+        input_sequence = example[ExampleString.input_sequence]
+        target_sequence = example[ExampleString.target_sequence]
         #remove the data of exchange date
         input_lines = [line[1: self.__feature_size__ + 1 ] for line in input_sequence]
         target_lines = [line[1:self.__feature_size__ + 1] for line in target_sequence]
@@ -376,11 +298,11 @@ class InputData():
         sequence = sequence.flatten().tolist()
 
         #prepared for ex
-        context_sequent_length = self.__sequent_length__
-        context_token = self.__token__
-        context_start = self.__input_sequence_start_date__
-        context_end = self.__input_sequence_end_date__
-        input_sequence = self.__example_input_sequence__
+        context_sequent_length = ExampleString.sequent_length
+        context_token = ExampleString.token
+        context_start = ExampleString.input_start_date
+        context_end = ExampleString.input_end_date
+        input_sequence = ExampleString.input_sequence
 
         #build ex
         ex = tf.train.SequenceExample()
@@ -394,16 +316,16 @@ class InputData():
         return ex
     #
     def _decode_prediction_example(self, ex_serial):
-        context_features = {self.__token__:
+        context_features = {ExampleString.token:
                                 tf.FixedLenFeature([], dtype=tf.string),
-                            self.__sequent_length__:
+                            ExampleString.sequent_length:
                                 tf.FixedLenFeature([], dtype=tf.int64),
-                            self.__input_sequence_end_date__:
+                            ExampleString.input_end_date:
                                 tf.FixedLenFeature([], dtype=tf.string),
-                            self.__input_sequence_start_date__:
+                            ExampleString.input_start_date:
                                 tf.FixedLenFeature([], dtype=tf.string)
                            }
-        sequence_features = {self.__example_input_sequence__:
+        sequence_features = {ExampleString.input_sequence:
                              tf.FixedLenSequenceFeature([], dtype=tf.float32)
                             }
         context_parsed, sequence_parsed = tf.parse_single_sequence_example(
@@ -416,8 +338,8 @@ class InputData():
     def _encode_train_example(self, example_lines, token):
         #prepare content
         #get the two sequence
-        input_sequence = example_lines[self.__example_input_sequence__]
-        target_sequence = example_lines[self.__example_target_sequence__]
+        input_sequence = example_lines[ExampleString.input_sequence]
+        target_sequence = example_lines[ExampleString.target_sequence]
         #remove data of exchange date and get them flatten
         _inputs = [line[1:] for line in input_sequence]
         _targets = [line[1:] for line in target_sequence]
@@ -433,19 +355,19 @@ class InputData():
         #begin to encode
         ex = tf.train.SequenceExample()
         ex.context.feature[
-            self.__sequent_length__].int64_list.value.append(length)
+            ExampleString.sequent_length].int64_list.value.append(length)
         ex.context.feature[
-            self.__input_sequence_start_date__].bytes_list.value.append(input_start)
+            ExampleString.input_start_date].bytes_list.value.append(input_start)
         ex.context.feature[
-            self.__input_sequence_end_date__].bytes_list.value.append(input_end)
+            ExampleString.input_end_date].bytes_list.value.append(input_end)
         ex.context.feature[
-            self.__target_sequence_start_date__].bytes_list.value.append(target_start)
+            ExampleString.target__start_date].bytes_list.value.append(target_start)
         ex.context.feature[
-            self.__target_sequence_end_date__].bytes_list.value.append(target_end)
+            ExampleString.target_end_date].bytes_list.value.append(target_end)
         ex.context.feature[
-            self.__token__].bytes_list.value.append(token_bytes)
-        fl_inputs = ex.feature_lists.feature_list[self.__example_input_sequence__]
-        fl_targets = ex.feature_lists.feature_list[self.__example_target_sequence__]
+            ExampleString.token].bytes_list.value.append(token_bytes)
+        fl_inputs = ex.feature_lists.feature_list[ExampleString.input_sequence]
+        fl_targets = ex.feature_lists.feature_list[ExampleString.target_sequence]
         for _input, _target in zip(inputs, targets):
             fl_inputs.feature.add().float_list.value.append(_input)
             fl_targets.feature.add().float_list.value.append(_target)
@@ -453,16 +375,16 @@ class InputData():
     #
     def _decode_train_example(self, ex_serial):
         context_features = {
-            self.__sequent_length__: tf.FixedLenFeature([], dtype=tf.int64),
-            self.__input_sequence_start_date__: tf.FixedLenFeature([], dtype=tf.string),
-            self.__input_sequence_end_date__: tf.FixedLenFeature([], dtype=tf.string),
-            self.__target_sequence_start_date__: tf.FixedLenFeature([], dtype=tf.string),
-            self.__target_sequence_end_date__: tf.FixedLenFeature([], dtype=tf.string),
-            self.__token__: tf.FixedLenFeature([], dtype=tf.string)
+            ExampleString.sequent_length: tf.FixedLenFeature([], dtype=tf.int64),
+            ExampleString.input_start_date: tf.FixedLenFeature([], dtype=tf.string),
+            ExampleString.input_end_date: tf.FixedLenFeature([], dtype=tf.string),
+            ExampleString.target__start_date: tf.FixedLenFeature([], dtype=tf.string),
+            ExampleString.target_end_date: tf.FixedLenFeature([], dtype=tf.string),
+            ExampleString.token: tf.FixedLenFeature([], dtype=tf.string)
         }
         sequence_features = {
-            self.__example_input_sequence__: tf.FixedLenSequenceFeature([], dtype=tf.float32),
-            self.__example_target_sequence__: tf.FixedLenSequenceFeature([], dtype=tf.float32)
+            ExampleString.input_sequence: tf.FixedLenSequenceFeature([], dtype=tf.float32),
+            ExampleString.target_sequence: tf.FixedLenSequenceFeature([], dtype=tf.float32)
         }
         context_parsed, sequence_parsed = tf.parse_single_sequence_example(
             serialized=ex_serial,
@@ -470,7 +392,7 @@ class InputData():
             sequence_features=sequence_features
         )
         return context_parsed, sequence_parsed
-        
+
     #
     def _get_files(self, pure_path, match):
         ''' This method get all the files in specified raw data dir
@@ -491,7 +413,7 @@ class InputData():
         '''
         _is_comptible = True
         lines = []
-        with self.__fsys_data__.open(self.__default_raw_data_dir__ + filename,
+        with self.__fsys_data__.open(self.__raw_data_dir__ + filename,
                                      mode='r') as raw_file:
 
             reader = csv.reader(raw_file)
@@ -522,7 +444,7 @@ class InputData():
             with self.__fsys_data__.open(path, mode='w') as logerror:
                 writer = csv.writer(logerror)
                 writer.writerow(['filename', 'errorlog'])
-        path = self.__default_result_data_dir__ + self.__default_log_file__
+        path = self.__result_data_dir__ + AllForFile.log_file
         if self.__fsys_data__.exists(path) is not True:
             __createlogerrorfile__(path)
         with self.__fsys_data__.open(path, mode='a') as logfile:
