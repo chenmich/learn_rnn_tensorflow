@@ -191,9 +191,8 @@ class InputData():
     def _save_examples(self, ex_serial, ex_type):
         filename = self._get_fileobject(ex_type)
         with self.__fsys_data__.open(filename, mode='a') as fp:
-            self.__fsys_data__.tree()
             writer = tf.python_io.TFRecordWriter(fp.name)
-            writer.write(ex.SerializeToString())
+            writer.write(ex_serial)
             writer.close()
         
     #

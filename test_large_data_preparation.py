@@ -87,8 +87,7 @@ def prepare_example_line():
     input_sequence = np.array(_inputs).flatten()
     target_sequence = np.array(_target).flatten()
     return example_line, content, input_sequence, target_sequence
-    
-
+# 
 #test InputData class
 class test_get_files(tf.test.TestCase):
     ''' test the method of InputData' method _get_raw_data_files
@@ -399,19 +398,17 @@ class test_path():
         path2 = 'result_data/dataset200_step'
         filename = 'result_data/dataset200_step/test.tfrecord'
 class test_save_examples(tf.test.TestCase):
-    
-
     def setUp(self):
         self.fsys = fs.open_fs('data')
         self.fsys.makedir(test_path.path1)
         self.fsys.makedir(test_path.path2)
-        self.fsys.create(test.path.filename)
+        self.fsys.create(test_path.filename)
     def tearDown(self):
         file_exist = self.fsys.exists(test_path.filename)
         if file_exist is True:
-            self.fsys.remove(filename)
-        self.fsys.removedir(path2)
-        self.fsys.removedir(path1)
+            self.fsys.remove(test_path.filename)
+        self.fsys.removedir(test_path.path2)
+        self.fsys.removedir(test_path.path1)
         self.fsys.close()
     def test_save(self):
         class inputdataForTest_savaExample(ldp.InputData):
@@ -419,22 +416,19 @@ class test_save_examples(tf.test.TestCase):
                 return test_path.filename
         #
         example_type = ldp.ExampleType.test
-        inputdata = inputdataForTest_savaExample(self.fsys, MAX_STEP, FEATURE_SIZE)
-        max_step = inputdata.__max_step__
-        feature_size = inputdata.__feature_size__
-        _lines = np.random.normal(size=2*max_step*feature_size).reshape(
-            2*max_step, feature_size).tolist()
-        lines = [[str(datetime.date.today())] + _line for _line in _lines]
-        lines.reverse()
-        input_sequence = lines[0:MAX_STEP]
-        target_sequence = lines[MAX_STEP:]
-        example_line = {ldp.ExampleString.input_sequence: input_sequence,
-                        ldp.ExampleString.target_sequence: target_sequence}
-        
-        _token = 'some00000'
-        ex = inputdata._encode_train_example(example_line, _token)
+        example_line, content, _, _ = prepare_example_line()
+        inputdata = inputdataForTest_savaExample(self.fsys,MAX_STEP, FEATURE_SIZE)
+        ex = inputdata._encode_train_example(example_line, content.token)
         inputdata._save_examples(ex.SerializeToString(), example_type)
-        self.assertGreater(fsys.getsize(path + filename), 0)
+        self.assertTrue(self.fsys.exists(test_path.filename))
+        real_size = self.fsys.getsize(test_path.filename)
+        expect_size = 0
+        self.assertGreater(real_size, expect_size)
+        inputdata._save_examples(ex.SerializeToString(), example_type)
+        expect_size = real_size
+        real_size = self.fsys.getsize(test_path.filename)
+        self.assertGreater(real_size, expect_size)
+        
 
 #
 if __name__ == "__main__":
