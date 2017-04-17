@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import tempfile
 
-tmp_filename = 'tf.tmp'
+tmp_filename = 'data/tf.tmp'
 
 sequences = [[1, 2, 3], [1, 2], [3, 2, 1]]
 label_sequences = [[0, 1, 0], [1, 0], [1, 1, 1]]
@@ -36,8 +36,7 @@ def make_example(input_sequence, output_sequence):
 
 # Write all examples into a TFRecords file
 def save_tf(filename):
-    with open(filename, 'w') as fp:
-        writer = tf.python_io.TFRecordWriter(fp.name)
+        writer = tf.python_io.TFRecordWriter(tmp_filename)
         for sequence, label_sequence in zip(sequences, label_sequences):
             ex = make_example(sequence, label_sequence)
             writer.write(ex.SerializeToString())
@@ -73,7 +72,3 @@ context_parsed, sequence_parsed = tf.parse_single_sequence_example(
     sequence_features=sequence_features
 )
 
-print()
-print('===========================================')
-print(sequence_parsed)
-    
