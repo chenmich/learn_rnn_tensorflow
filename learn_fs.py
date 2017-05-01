@@ -2,17 +2,17 @@ import csv
 import json
 import tempfile
 
-import fs
-import numpy as np
 from fs.memoryfs import MemoryFS
-from fs.opener import open_fs
+import numpy as np
 
-fsys = fs.open_fs('data')
-path1 = 'result_data'
-path2 = 'result_data/dataset200_step'
-filename = 'result_data/dataset200_step/test.tfrecord'
-file_exist = fsys.exists(filename)
-if fsys.exists(filename) is True:
-    fsys.remove(filename)
-fsys.removedir(path2)
-fsys.removedir(path1)
+fsys = MemoryFS()
+fsys.makedir('raw_data')
+fsys.makedir('result_data')
+fsys.makedir('result_data/dataset_200_step/')
+pure_path = 'result_data/dataset_200_step/'
+fsys.create(pure_path + 'a.tfrecord')
+fsys.create(pure_path + 'b.tfrecord')
+fsys.create(pure_path + 'log.log')
+fsys.tree()
+fsys.removetree(pure_path)
+fsys.tree()

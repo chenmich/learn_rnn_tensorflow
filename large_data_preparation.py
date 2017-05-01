@@ -16,12 +16,12 @@
 '''
 import argparse
 import csv
-import json
-import tempfile
 from datetime import datetime
 
 import numpy as np
 import tensorflow as tf
+
+import fs
 from fs.osfs import OSFS
 
 import rnn_model_exception
@@ -54,6 +54,8 @@ class AllForFile():
     train_record = 'train*.tfrecord'
     raw_file_wildcard = '*.csv'
     log_file = 'logerror*.txt'
+    # size of the all tfrecord file, if larger than this, it will be divided
+    result_file_size = 30 * 1024 * 1024
 #
 class ExampleString():
     ''' This class for example's string
@@ -66,25 +68,111 @@ class ExampleString():
     input_end_date = 'input_end'
     target__start_date = 'target_start'
     target_end_date = 'target_end'
-    # size of the all tfrecord file, if larger than this, it will be divided
-    result_file_size = 30 * 1024 * 1024
 #
 example_map = {ExampleType.prediction: AllForFile.prediction_record,
                ExampleType.test: AllForFile.test_record,
                ExampleType.train: AllForFile.train_record,
                ExampleType.valid: AllForFile.valid_record}
+#
+class Files():
+    '''This class's responsiblity is for save and get examples
+    '''
+    def __init__(self, fsys_data):
+        fsys = fsys_data
+        self.__fsys_data__ = fsys_data
+        self.__result_data_dir__ = 'result_data'
+        self.__raw_data_dir__ = 'raw_data'
+        if self.__has_raw_data() is False:
+            raise  rnn_model_exception.NoRawDataFileFound('There is any file of raw data!')
+        if(fsys.exists(self.__result_data_dir__)) is False:
+            fsys.makedir(self.__result_data_dir__)
+        self.__serialized_examples__ = []
+    def __has_raw_data(self):
+        ''' check whether there are any files of raw data
+        '''
+        fsys = self.__fsys_data__
+        has_raw_data = True
+        if(fsys.exists(self.__raw_data_dir__)) is False:
+            has_raw_data = False
+        filelist = self._get_files(self.__raw_data_dir__, '*.csv')
+        if filelist.__len__ == 0:
+            has_raw_data = False
+        return has_raw_data
+
+    def get_files(self, pure_path, match):
+        ''' This method get all the files in specified raw data dir
+        '''
+        _filelist = list(self.__fsys_data__.filterdir(pure_path,
+                                                      files=[match]))
+        filelist = [x.name for x in _filelist]
+        return filelist
+    #
+    def empty_default_result_dir(self):
+        ''' remove all the content of a directory(include that delete all sub directories)
+        '''
+        fsys = self.filesystem()
+        directory = self.default_result_dir()
+        if fsys.exists(directory) is False:
+            raise fs.errors.DestinationExists('The directory ' + directory +' is not exist!')
+        info = fsys.getinfo(directory, 'details',)
+        if info.is_dir is False:
+            raise fs.errors.DirectoryExpected('The ' + directory + 'is not a directory!')
+        fsys.removetree(directory)
+        fsys.makedir(directory)
+    #
+    @property
+    def default_result_dir(self):
+        ''' the property of default result directory
+        '''
+        return self.__default_result_dir__
+    #
+    @default_result_dir.setter
+    def default_result_dir(self, default_result_dir):
+        fsys = self.__fsys_data__
+        if fsys.exists(self.__result_data_dir__ + default_result_dir) is False:
+            fsys.makedir(self.__result_data_dir__ + default_result_dir)
+
+    @property
+    def filesystem(self):
+        ''' filesystem'''
+        return self.__fsys_data__
+    #
+    def save_examples(self, ex_serial):
+        ''' save an serialized example to a tf.record file
+        '''
+        self.__serialized_examples__.append(ex_serial)
+        if self.__examples_len__() >= AllForFile.result_file_size:
+            self.__save_examples__()
+    #
+    def __save_examples__(self):
+        pass
+    #
+    def __examples_len__(self):
+        __len = 0
+        for example in self.__serialized_examples__:
+            __len += example.__len__()
+        return __len
+    def get_raw_lines(self):
+        pass
 #refactor to oriented-object
 class InputData():
     ''' This class is for preparation of model data
         At least, this class must convert the csv format to tfrecord format
     '''
-    def __init__(self, fsys_data, max_step, feature_size):
+    def __init__(self, fsys_data, max_step, feature_size, files):
         #model parameter
         self.__max_step__ = max_step
         self.__feature_size__ = feature_size
+        if isinstance(files, Files) is False:
+            raise TypeError('The argument files must be the instance of class Files')
+        else:
+            self.__files__ = files
+            self.__files__.default_result_dir('result_data/' + 'dataset_' + (
+                str(max_step) + '_step' + '/'))
+        
         #file system
         self.__raw_data_dir__ = 'raw_data/'
-        self.__result_data_dir__ = 'result_data/' + 'dataset' + (
+        self.__result_data_dir__ = 'result_data/' + 'dataset_' + (
             str(max_step) + '_step' + '/')
         self.__fsys_data__ = fsys_data
         #statistical feature
@@ -194,7 +282,6 @@ class InputData():
             writer = tf.python_io.TFRecordWriter(fp.name)
             writer.write(ex_serial)
             writer.close()
-        
     #
     def _get_fileobject(self, ex_type):
         pass
