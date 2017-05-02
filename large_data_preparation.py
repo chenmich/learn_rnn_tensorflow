@@ -26,7 +26,6 @@ from fs.osfs import OSFS
 
 import rnn_model_exception
 
-
 #
 class stat_feature():
     '''store the stat feature of price and volumn respectively
@@ -69,19 +68,23 @@ class ExampleString():
     target__start_date = 'target_start'
     target_end_date = 'target_end'
 #
+class RawDataLine():
+    def __init__(self, token, lines):
+        self.token = token
+        self.lines = lines
 example_map = {ExampleType.prediction: AllForFile.prediction_record,
                ExampleType.test: AllForFile.test_record,
                ExampleType.train: AllForFile.train_record,
                ExampleType.valid: AllForFile.valid_record}
 #
-class Files():
+class FilesOp():
     '''This class's responsiblity is for save and get examples
     '''
     def __init__(self, fsys_data):
         fsys = fsys_data
         self.__fsys_data__ = fsys_data
-        self.__result_data_dir__ = 'result_data'
-        self.__raw_data_dir__ = 'raw_data'
+        self.__result_data_dir__ = 'result_data/'
+        self.__raw_data_dir__ = 'raw_data/'
         if self.__has_raw_data() is False:
             raise  rnn_model_exception.NoRawDataFileFound('There is any file of raw data!')
         if(fsys.exists(self.__result_data_dir__)) is False:
@@ -94,7 +97,7 @@ class Files():
         has_raw_data = True
         if(fsys.exists(self.__raw_data_dir__)) is False:
             has_raw_data = False
-        filelist = self._get_files(self.__raw_data_dir__, '*.csv')
+        filelist = self.get_files(self.__raw_data_dir__, '*.csv')
         if filelist.__len__ == 0:
             has_raw_data = False
         return has_raw_data
@@ -153,13 +156,31 @@ class Files():
             __len += example.__len__()
         return __len
     def get_raw_lines(self):
-        pass
+        ''' Get the raw lines of example from files of raw data
+            return:
+                token:file name without extensive name of raw data
+                lines:the raw lines        
+        '''
+        fsys = self.__fsys_data__
+        raw_file_names = self.get_files(self.__raw_data_dir__, '*.csv')        
+        for raw_file_name in raw_file_names:
+
+            with fsys.open(self.__raw_data_dir__ + raw_file_name, mode='r') as raw_file:
+                reader = csv.reader(raw_file)
+                lines = []
+                for line in reader:
+                    lines.append(line)
+                raw_lines = RawDataLine(raw_file_name, lines[1:])
+                yield raw_lines
+    #
+    
+            
 #refactor to oriented-object
 class InputData():
     ''' This class is for preparation of model data
         At least, this class must convert the csv format to tfrecord format
     '''
-    def __init__(self, fsys_data, max_step, feature_size, files):
+    def __init__(self, fsys_data, max_step, feature_size):
         #model parameter
         self.__max_step__ = max_step
         self.__feature_size__ = feature_size
