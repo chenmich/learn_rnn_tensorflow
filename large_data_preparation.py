@@ -186,9 +186,7 @@ class InputData():
         #model parameter
         self.__max_step__ = max_step
         self.__feature_size__ = feature_size
-        self.__files__.default_result_dir('result_data/' + 'dataset_' + (
-            str(max_step) + '_step' + '/'))
-        
+
         #file system
         self.__raw_data_dir__ = 'raw_data/'
         self.__result_data_dir__ = 'result_data/' + 'dataset_' + (
