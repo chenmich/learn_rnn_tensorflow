@@ -431,5 +431,28 @@ class test_save_examples(tf.test.TestCase):
         
 
 #
+class test_Files(tf.test.TestCase):
+    def setUp(self):
+        self.fsys = get_fsys()
+    def tearDown(self):
+        self.fsys.close()
+    def test_get_files(self):
+        filesOp = ldp.FilesOp(self.fsys)
+        files = filesOp.get_files('raw_data', '*.csv')
+        self.assertEqual(files.__len__(), 5)
+        self.assertEqual(files[0], 'some00000.csv')
+        self.assertEqual(files[1], 'some00001.csv')
+        self.assertEqual(files[2], 'some00002.csv')
+        self.assertEqual(files[3], 'some00003.csv')
+        self.assertEqual(files[4], 'some00004.csv')
+    #
+    def test_get_raw_lines(self):
+        filesop = ldp.FilesOp(self.fsys)
+        rawline = filesop.get_raw_lines()
+        rawdataline = next(rawline)
+        self.assertEqual(rawdataline.token, 'some00000.csv')
+        rawdataline = next(rawline)
+        self.assertEqual(rawdataline.token, 'some00001.csv')
+
 if __name__ == "__main__":
     tf.test.main()
