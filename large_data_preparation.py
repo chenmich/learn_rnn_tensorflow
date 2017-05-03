@@ -153,6 +153,8 @@ class Files():
             __len += example.__len__()
         return __len
     def get_raw_lines(self):
+        ''' Get the raw  lines of the example from files of raw data
+        '''
         pass
 #refactor to oriented-object
 class InputData():
